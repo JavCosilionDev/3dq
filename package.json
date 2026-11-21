@@ -13,6 +13,9 @@
     "build": "npm run client-build",
     "test:pdf": "node --test tests/pdf.test.js",
     "pdf:render": "node scripts/render-pdf.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
     "install-all": "npm install && npm run client-install",
     "postinstall": "npm run client-install && npm run build"
   },

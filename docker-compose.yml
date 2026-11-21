@@ -1,0 +1,19 @@
+services:
+  3dq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: 3dq-local:latest
+    container_name: 3dq
+    init: true
+    ports:
+      - "6123:6123"
+    environment:
+      CONFIG_DIR: /config
+      PORT: 6123
+      NODE_ENV: production
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    volumes:
+      - ./config:/config
+    shm_size: "512mb"
+    restart: unless-stopped

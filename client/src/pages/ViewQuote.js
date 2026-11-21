@@ -201,7 +201,7 @@ function ViewQuote() {
     window.open(`/api/quotes/${id}/invoice/${type}`, '_blank');
   };
 
-  const generatePdf = async () => {
+  const generatePdf = async (download = false) => {
     setGeneratingPdf(true);
     setActionError(null);
 
@@ -217,7 +217,7 @@ function ViewQuote() {
         throw new Error(data.error || 'No se pudo generar el PDF');
       }
 
-      window.open(data.url, '_blank');
+      window.open(download ? `${data.url}?download=1` : data.url, '_blank');
     } catch (pdfError) {
       console.error('Error generating PDF:', pdfError);
       setActionError(pdfError.message);
@@ -332,11 +332,19 @@ function ViewQuote() {
           </Button>
           <Button
             variant="contained"
-            onClick={generatePdf}
+            onClick={() => generatePdf(false)}
             startIcon={<PictureAsPdfIcon />}
             disabled={generatingPdf}
           >
             {generatingPdf ? 'Generando...' : 'PDF Impremática'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => generatePdf(true)}
+            startIcon={<PictureAsPdfIcon />}
+            disabled={generatingPdf}
+          >
+            Descargar PDF
           </Button>
           {quote.status === 'sold' ? (
             <Button variant="outlined" color="warning" onClick={handleClearSale}>

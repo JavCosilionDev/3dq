@@ -68,7 +68,8 @@ module.exports = (db) => {
   router.get('/pdf/exports/:filename', (req, res) => {
     try {
       const filePath = resolveExportFile(req.params.filename);
-      res.setHeader('Content-Disposition', `inline; filename="${req.params.filename}"`);
+      const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+      res.setHeader('Content-Disposition', `${disposition}; filename="${req.params.filename}"`);
       res.sendFile(filePath);
     } catch (error) {
       sendError(res, error);

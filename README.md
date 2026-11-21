@@ -30,50 +30,48 @@ It helps you calculate quotes for 3D printing jobs by considering filament costs
 
 ## Getting Started
 
-> **Note**: The `/config` directory is mapped to where you want the database and all application data to be saved. This ensures your data persists even when the container is updated or removed.
+> **Note**: The project uses `./config` as the persistent data directory. It contains the SQLite database and generated PDFs. Docker Compose mounts it at `/config`.
 
 ### Quick Start with Docker
 
 ```bash
-# Create a directory for persistent data
-mkdir -p ~/3dq-data
-
-# Run the container
-docker run -d \
-  --name 3dq \
-  -p 6123:6123 \
-  -v ~/3dq-data:/config \
-  -e CONFIG_DIR=/config \
-  ghcr.io/migz93/3dq:latest
+npm run docker:up
 ```
 
 Then access the application at http://localhost:6123
 
+The container builds the current project, including the React client and Chromium for PDF generation.
+
 ### Docker Compose
 
-Create a `docker-compose.yml` file:
+The repository includes `docker-compose.yml`:
 
 ```yaml
-version: '3'
-
 services:
   3dq:
-    image: ghcr.io/migz93/3dq:latest
+    build: .
     container_name: 3dq
     ports:
       - "6123:6123"
     volumes:
-      - ./data:/config
+      - ./config:/config
     environment:
-      - CONFIG_DIR=/config
+      CONFIG_DIR: /config
+      PORT: 6123
+      NODE_ENV: production
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
     restart: unless-stopped
 ```
 
-Then run:
+Useful commands:
 
 ```bash
-docker-compose up -d
+npm run docker:up
+npm run docker:logs
+npm run docker:down
 ```
+
+Do not run `npm run dev` at the same time as Docker. The development server uses port `6123` for Express and `3000` for React; Docker serves everything from `6123`.
 
 ## PDF Impremática
 
