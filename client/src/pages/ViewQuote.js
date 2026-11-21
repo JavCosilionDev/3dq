@@ -278,7 +278,15 @@ function ViewQuote() {
   // Calculate tax if tax rate is greater than 0
   const taxRate = parseFloat(settings.tax_rate) || 0;
   const taxAmount = taxRate > 0 ? afterDiscount * (taxRate / 100) : 0;
-  const finalTotal = afterDiscount + taxAmount;
+  const hasBreakdown = Boolean(
+    quote.filaments?.length
+    || quote.hardware?.length
+    || quote.print_setup
+    || quote.labour
+  );
+  const finalTotal = hasBreakdown
+    ? afterDiscount + taxAmount
+    : Number(quote.total_cost) || 0;
 
   const formatPrintTime = (totalMinutes) => {
     if (totalMinutes === null || totalMinutes === undefined || totalMinutes === 0) {
@@ -561,43 +569,54 @@ function ViewQuote() {
 
       {/* Cost Summary Title */}
       <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Cost Summary</Typography>
-      <Grid container spacing={3} sx={{ mb: 4 }}> {/* Added mb for spacing after this section */}
-        {/* Left Box: Cost Breakdown */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}> {/* Added height 100% for equal height if desired */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Cost Breakdown</Typography>
-            <Typography variant="body2">Filament: {settings.currency_symbol}{filamentTotal.toFixed(2)}</Typography>
-            <Typography variant="body2">Hardware: {settings.currency_symbol}{hardwareTotal.toFixed(2)}</Typography>
-            <Typography variant="body2">Power: {settings.currency_symbol}{powerCost.toFixed(2)}</Typography>
-            <Typography variant="body2">Printer Depreciation: {settings.currency_symbol}{depreciationCost.toFixed(2)}</Typography>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Production Cost: {settings.currency_symbol}{totalProductionCost.toFixed(2)}</Typography>
-            <Typography variant="body2">Labour: {settings.currency_symbol}{labourCost.toFixed(2)}</Typography>
-          </Paper>
-        </Grid>
+      {hasBreakdown ? (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {/* Left Box: Cost Breakdown */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Cost Breakdown</Typography>
+              <Typography variant="body2">Filament: {settings.currency_symbol}{filamentTotal.toFixed(2)}</Typography>
+              <Typography variant="body2">Hardware: {settings.currency_symbol}{hardwareTotal.toFixed(2)}</Typography>
+              <Typography variant="body2">Power: {settings.currency_symbol}{powerCost.toFixed(2)}</Typography>
+              <Typography variant="body2">Printer Depreciation: {settings.currency_symbol}{depreciationCost.toFixed(2)}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Production Cost: {settings.currency_symbol}{totalProductionCost.toFixed(2)}</Typography>
+              <Typography variant="body2">Labour: {settings.currency_symbol}{labourCost.toFixed(2)}</Typography>
+            </Paper>
+          </Grid>
 
-        {/* Right Box: Financial Summary */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}> {/* Added height 100% for equal height if desired */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Financial Summary</Typography>
-            {quantity > 1 && (
-              <>
-                <Typography variant="body2">Per Unit Production Cost: {settings.currency_symbol}{perUnitProductionCost.toFixed(2)}</Typography>
-                <Typography variant="body2">Per Unit Subtotal: {settings.currency_symbol}{perUnitSubtotal.toFixed(2)}</Typography>
-              </>
-            )}
-            <Typography variant="body2">Total Subtotal (Qty {quantity}): {settings.currency_symbol}{subtotal.toFixed(2)}</Typography>
-            <Typography variant="body2">Markup ({quote.markup_percent}%): +{settings.currency_symbol}{markup.toFixed(2)}</Typography>
-            {quote.discount_percent > 0 && (
-              <Typography variant="body2" sx={{ color: 'error.main' }}>Discount ({quote.discount_percent}%): -{settings.currency_symbol}{discount.toFixed(2)}</Typography>
-            )}
-            {taxRate > 0 && (
-              <Typography variant="body2">Tax ({taxRate}%): +{settings.currency_symbol}{taxAmount.toFixed(2)}</Typography>
-            )}
-            <Divider sx={{ my: 1 }} />
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Final Price: {settings.currency_symbol}{finalTotal.toFixed(2)}</Typography>
-          </Paper>
+          {/* Right Box: Financial Summary */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Financial Summary</Typography>
+              {quantity > 1 && (
+                <>
+                  <Typography variant="body2">Per Unit Production Cost: {settings.currency_symbol}{perUnitProductionCost.toFixed(2)}</Typography>
+                  <Typography variant="body2">Per Unit Subtotal: {settings.currency_symbol}{perUnitSubtotal.toFixed(2)}</Typography>
+                </>
+              )}
+              <Typography variant="body2">Total Subtotal (Qty {quantity}): {settings.currency_symbol}{subtotal.toFixed(2)}</Typography>
+              <Typography variant="body2">Markup ({quote.markup_percent}%): +{settings.currency_symbol}{markup.toFixed(2)}</Typography>
+              {quote.discount_percent > 0 && (
+                <Typography variant="body2" sx={{ color: 'error.main' }}>Discount ({quote.discount_percent}%): -{settings.currency_symbol}{discount.toFixed(2)}</Typography>
+              )}
+              {taxRate > 0 && (
+                <Typography variant="body2">Tax ({taxRate}%): +{settings.currency_symbol}{taxAmount.toFixed(2)}</Typography>
+              )}
+              <Divider sx={{ my: 1 }} />
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Final Price: {settings.currency_symbol}{finalTotal.toFixed(2)}</Typography>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      ) : (
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="body1">
+            Esta cotización combina varios productos. El detalle y los precios están en el documento PDF.
+          </Typography>
+          <Typography variant="h6" sx={{ mt: 1, fontWeight: 'bold' }}>
+            Total: {settings.currency_symbol}{finalTotal.toFixed(2)}
+          </Typography>
+        </Paper>
+      )}
 
 
       {/* Sale Dialog */}
