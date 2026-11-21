@@ -6,6 +6,25 @@ const fs = require('fs');
 module.exports = (db) => {
   const router = express.Router();
 
+  // Generate the next quote number using the configured prefix
+  const getNextQuoteNumber = () => {
+    const prefixSetting = db.prepare("SELECT value FROM settings WHERE key = 'quote_prefix'").get();
+    const prefix = prefixSetting?.value || '3DQ';
+    const quotes = db.prepare('SELECT quote_number FROM quotes').all();
+
+    let maxNumber = 0;
+    quotes.forEach(({ quote_number }) => {
+      if (!quote_number || !quote_number.startsWith(prefix)) return;
+
+      const numericPart = quote_number.slice(prefix.length);
+      if (/^\d+$/.test(numericPart)) {
+        maxNumber = Math.max(maxNumber, parseInt(numericPart, 10));
+      }
+    });
+
+    return `${prefix}${String(maxNumber + 1).padStart(4, '0')}`;
+  };
+
 // Get all quotes
 router.get('/', (req, res) => {
   try {
@@ -187,6 +206,99 @@ router.post('/', (req, res) => {
       // Return the new quote ID
       res.status(201).json({ id: quoteId });
     })();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Duplicate an existing quote
+router.post('/:id/duplicate', (req, res) => {
+  try {
+    const sourceQuote = db.prepare('SELECT * FROM quotes WHERE id = ?').get(req.params.id);
+
+    if (!sourceQuote) {
+      return res.status(404).json({ error: 'Quote not found' });
+    }
+
+    const duplicatedQuote = db.transaction(() => {
+      // Create the new quote with the next available quote number
+      const quoteInfo = db.prepare(`
+        INSERT INTO quotes (
+          quote_number, title, customer_name, date, notes,
+          markup_percent, discount_percent, total_cost, quantity
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        getNextQuoteNumber(),
+        sourceQuote.title,
+        sourceQuote.customer_name,
+        sourceQuote.date,
+        sourceQuote.notes,
+        sourceQuote.markup_percent,
+        sourceQuote.discount_percent,
+        sourceQuote.total_cost,
+        sourceQuote.quantity || 1
+      );
+
+      const newQuoteId = quoteInfo.lastInsertRowid;
+
+      // Copy all related quote data
+      db.prepare(`
+        INSERT INTO quote_filaments (
+          quote_id, filament_id, filament_name, filament_price_per_gram,
+          grams_used, total_cost
+        )
+        SELECT ?, filament_id, filament_name, filament_price_per_gram,
+               grams_used, total_cost
+        FROM quote_filaments
+        WHERE quote_id = ?
+      `).run(newQuoteId, sourceQuote.id);
+
+      db.prepare(`
+        INSERT INTO quote_hardware (
+          quote_id, hardware_id, hardware_name, quantity, unit_price, total_cost
+        )
+        SELECT ?, hardware_id, hardware_name, quantity, unit_price, total_cost
+        FROM quote_hardware
+        WHERE quote_id = ?
+      `).run(newQuoteId, sourceQuote.id);
+
+      db.prepare(`
+        INSERT INTO quote_print_setup (
+          quote_id, printer_id, printer_name, print_time,
+          power_cost, depreciation_cost
+        )
+        SELECT ?, printer_id, printer_name, print_time,
+               power_cost, depreciation_cost
+        FROM quote_print_setup
+        WHERE quote_id = ?
+      `).run(newQuoteId, sourceQuote.id);
+
+      db.prepare(`
+        INSERT INTO quote_labour (
+          quote_id, design_minutes, preparation_minutes,
+          post_processing_minutes, other_minutes,
+          labour_rate_per_hour, total_cost
+        )
+        SELECT ?, design_minutes, preparation_minutes,
+               post_processing_minutes, other_minutes,
+               labour_rate_per_hour, total_cost
+        FROM quote_labour
+        WHERE quote_id = ?
+      `).run(newQuoteId, sourceQuote.id);
+
+      const createdQuote = db.prepare('SELECT * FROM quotes WHERE id = ?').get(newQuoteId);
+
+      return {
+        ...createdQuote,
+        filaments: db.prepare('SELECT * FROM quote_filaments WHERE quote_id = ?').all(newQuoteId),
+        hardware: db.prepare('SELECT * FROM quote_hardware WHERE quote_id = ?').all(newQuoteId),
+        print_setup: db.prepare('SELECT * FROM quote_print_setup WHERE quote_id = ?').get(newQuoteId) || null,
+        labour: db.prepare('SELECT * FROM quote_labour WHERE quote_id = ?').get(newQuoteId) || null
+      };
+    })();
+
+    res.status(201).json(duplicatedQuote);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
