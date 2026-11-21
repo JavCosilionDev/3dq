@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 6123;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(morgan('dev'));
 
 // Define paths for Docker compatibility
@@ -102,6 +102,9 @@ const createQuickQuoteRoutes = require('./routes/quick_quote');
 const createSettingsRoutes = require('./routes/settings');
 const createSpoolmanRoutes = require('./routes/spoolman');
 const createCountsRoutes = require('./routes/counts');
+const createPdfRoutes = require('./routes/pdf');
+const createSalesRoutes = require('./routes/sales');
+const createMergeRoutes = require('./routes/merge');
 
 // Initialize routes with the database instance
 const filamentRoutes = createFilamentRoutes(db);
@@ -112,6 +115,9 @@ const quickQuoteRoutes = createQuickQuoteRoutes(db);
 const settingsRoutes = createSettingsRoutes(db);
 const spoolmanRoutes = createSpoolmanRoutes(db);
 const countsRoutes = createCountsRoutes(db);
+const pdfRoutes = createPdfRoutes(db);
+const salesRoutes = createSalesRoutes(db);
+const mergeRoutes = createMergeRoutes(db);
 
 // Use routes
 app.use('/api/filaments', filamentRoutes);
@@ -123,6 +129,9 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/spoolman', spoolmanRoutes);
 // Add counts routes before other API routes to prevent conflicts
 app.use('/api/counts', countsRoutes);
+app.use('/api', pdfRoutes);
+app.use('/api', salesRoutes);
+app.use('/api', mergeRoutes);
 
 // Serve static assets in production
 app.use(express.static(path.join(__dirname, 'client/build')));

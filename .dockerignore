@@ -39,8 +39,9 @@ coverage
 Dockerfile
 .dockerignore
 
-# Github assets folder
-assets/**
+# Project assets not needed at runtime
+assets/docs
+assets/screenshots
 
 # Documentation
 *.md

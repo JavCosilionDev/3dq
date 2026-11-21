@@ -17,6 +17,10 @@ It helps you calculate quotes for 3D printing jobs by considering filament costs
 - **Quick Cost**: Generate fast cost estimates with minimal inputs
 - **Quote Builder**: Create detailed quotes with a step-by-step process (general info, filament, hardware, labour, cost summary)
 - **Quote History**: View & manage all past quotes
+- **Impremática PDF**: Generate client-ready PDFs from a validated document, with totals that close to the peso
+- **Document Editor**: Adjust issue date, target total, discount mode, shipping, gift flag and visible lines before exporting
+- **Sales Tracking**: Mark quotes as sold and review sold totals separately
+- **Quote Merging**: Combine existing quotes into one multi-product document using their calculated totals
 - **HTML Invoices**: Generate client-friendly or detailed internal invoices with optional tax calculation
 - **Filament Management**: Configure filament types with pricing and sync with Spoolman
 - **Printer Management**: Configure printers with depreciation and power usage calculations
@@ -69,6 +73,25 @@ Then run:
 
 ```bash
 docker-compose up -d
+```
+
+## PDF Impremática
+
+The PDF export uses the canonical document stored in `quote_documents` and renders it with Chromium. It requires Chrome or Chromium:
+
+- Windows: Chrome or Edge is detected automatically.
+- Linux/Docker: set `PUPPETEER_EXECUTABLE_PATH` to the Chromium executable.
+
+Generate a PDF from a JSON file:
+
+```bash
+npm run pdf:render -- tests/fixtures/pdf/IMP26-0034.json
+```
+
+Run the PDF regression tests:
+
+```bash
+npm run test:pdf
 ```
 
 ## Security Notice

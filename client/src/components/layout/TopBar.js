@@ -27,6 +27,10 @@ function TopBar() {
         return 'Quick Cost';
       case '/quotes':
         return 'Quotes';
+      case '/quotes/merge':
+        return 'Unir cotizaciones';
+      case '/sales':
+        return 'Ventas';
       case '/filaments':
         return 'Filament Management';
       case '/printers':
@@ -38,10 +42,13 @@ function TopBar() {
       case '/quote/new':
         return 'New Quote';
       default:
+        if (location.pathname.endsWith('/document') && location.pathname.startsWith('/quote/')) {
+          return 'Documento PDF';
+        }
         if (location.pathname.startsWith('/quote/')) {
           return 'View Quote';
         }
-        return '3DQ';
+        return 'Impremática';
     }
   };
 

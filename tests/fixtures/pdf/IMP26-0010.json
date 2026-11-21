@@ -1,0 +1,23 @@
+{
+  "folio_origen": "COT-3D-2026-0010",
+  "folio_salida": "IMP26-0010",
+  "fecha_emision": "2026-09-23",
+  "cliente": "General",
+  "modelo_base": "Porta juegos - Signo de interrogación",
+  "regalo": false,
+  "cantidad": 1,
+  "moneda": "MXN",
+  "iva_pct": 16,
+  "descuento_pct": 0,
+  "modo_descuento": "sin_descuento",
+  "subtotal_lista": 215,
+  "total_objetivo": 250,
+  "envio": { "monto": 0, "lleva_iva": false, "nota_entrega": null },
+  "duracion_minutos": 626,
+  "items": [
+    { "tipo": "filamento", "material": "PLA", "gramos": 135, "visible": true },
+    { "tipo": "mano_obra", "texto": "Preparación", "visible": true }
+  ],
+  "mostrar_precios_por_item": false,
+  "notas": []
+}

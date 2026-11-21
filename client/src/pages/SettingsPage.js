@@ -30,7 +30,13 @@ function SettingsPage() {
     company_name: '',
     spoolman_sync_enabled: 'false',
     spoolman_url: 'http://localhost:7912',
-    tax_rate: '0'
+    tax_rate: '0',
+    pdf_brand_name: 'Impremática',
+    pdf_brand_url: 'imprematica.com',
+    pdf_logo_path: 'assets/images/imprematica-logo.png',
+    pdf_template_version: 'imprematica-v1',
+    pdf_currency_code: 'MXN',
+    pdf_shipping_note: 'Entrega estimada: 2 días hábiles en promedio.'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,10 +53,16 @@ function SettingsPage() {
         currency_symbol: settings.currency_symbol || '',
         quote_prefix: settings.quote_prefix || '',
         accent_color: settings.accent_color || '#E53935',
-        company_name: settings.company_name || 'Prints Inc',
+        company_name: settings.company_name || 'Impremática',
         spoolman_sync_enabled: settings.spoolman_sync_enabled || 'false',
         spoolman_url: settings.spoolman_url || 'http://localhost:7912',
-        tax_rate: settings.tax_rate || '0'
+        tax_rate: settings.tax_rate || '0',
+        pdf_brand_name: settings.pdf_brand_name || 'Impremática',
+        pdf_brand_url: settings.pdf_brand_url || 'imprematica.com',
+        pdf_logo_path: settings.pdf_logo_path || 'assets/images/imprematica-logo.png',
+        pdf_template_version: settings.pdf_template_version || 'imprematica-v1',
+        pdf_currency_code: settings.pdf_currency_code || 'MXN',
+        pdf_shipping_note: settings.pdf_shipping_note || 'Entrega estimada: 2 días hábiles en promedio.'
       });
       setLoading(false);
     }
@@ -320,7 +332,7 @@ function SettingsPage() {
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          accent_color: '#E53935'
+                          accent_color: '#0060FA'
                         });
                       }}
                       sx={{ mt: 1 }}
@@ -335,6 +347,75 @@ function SettingsPage() {
               </Grid>
             </Grid>
           </Box>
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mb: 4, backgroundColor: 'background.paper' }}>
+        <CardHeader title="Documento PDF" />
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_brand_name"
+                label="Marca del PDF"
+                value={formData.pdf_brand_name}
+                onChange={handleInputChange}
+                fullWidth
+                required
+                helperText="Nombre visible en el documento"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_brand_url"
+                label="Sitio web"
+                value={formData.pdf_brand_url}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Texto alineado a la derecha en el encabezado"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_logo_path"
+                label="Ruta del logo"
+                value={formData.pdf_logo_path}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Ruta relativa al proyecto"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_template_version"
+                label="Versión de plantilla"
+                value={formData.pdf_template_version}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Se guarda en la auditoría de cada PDF"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_currency_code"
+                label="Código de moneda"
+                value={formData.pdf_currency_code}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Ejemplo: MXN"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="pdf_shipping_note"
+                label="Nota de entrega"
+                value={formData.pdf_shipping_note}
+                onChange={handleInputChange}
+                fullWidth
+                helperText="Se muestra cuando la cotización tiene envío"
+              />
+            </Grid>
+          </Grid>
         </CardContent>
       </Card>
 

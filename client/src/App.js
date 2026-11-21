@@ -19,6 +19,9 @@ import SettingsPage from './pages/SettingsPage';
 import QuoteBuilder from './pages/QuoteBuilder';
 import QuickCost from './pages/QuickCost';
 import ViewQuote from './pages/ViewQuote';
+import QuoteDocumentPage from './pages/QuoteDocumentPage';
+import SalesPage from './pages/SalesPage';
+import MergeQuotesPage from './pages/MergeQuotesPage';
 
 // Context
 import { SettingsProvider } from './context/SettingsContext';
@@ -29,10 +32,11 @@ function App() {
     electricity_cost_per_kwh: 0.2166,
     labour_rate_per_hour: 13.00,
     default_markup_percent: 50,
-    currency_symbol: '£',
-    quote_prefix: '3DQ',
-    accent_color: '#E53935',
-    tax_rate: 0
+    currency_symbol: '$',
+    quote_prefix: 'COT-3D-',
+    accent_color: '#0060FA',
+    company_name: 'Impremática',
+    tax_rate: 16
   });
 
   // Create theme with dark mode and accent color from settings
@@ -40,7 +44,7 @@ function App() {
     palette: {
       mode: 'dark',
       primary: {
-        main: settings.accent_color || '#E53935',
+        main: settings.accent_color || '#0060FA',
       },
       secondary: {
         main: '#f50057',
@@ -105,6 +109,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/quotes" element={<Dashboard />} />
+                  <Route path="/quotes/merge" element={<MergeQuotesPage />} />
+                  <Route path="/sales" element={<SalesPage />} />
                   <Route path="/filaments" element={<FilamentPage />} />
                   <Route path="/printers" element={<PrinterPage />} />
                   <Route path="/hardware" element={<HardwarePage />} />
@@ -113,6 +119,7 @@ function App() {
                   <Route path="/quote/edit/:id" element={<QuoteBuilder />} />
                   <Route path="/quick-cost" element={<QuickCost />} />
                   <Route path="/quote/:id" element={<ViewQuote />} />
+                  <Route path="/quote/:id/document" element={<QuoteDocumentPage />} />
                 </Routes>
               </Box>
             </Box>

@@ -31,7 +31,8 @@ import {
   Edit as EditIcon,
   FilterList as FilterIcon,
   ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon
+  ArrowDownward as ArrowDownIcon,
+  CallMerge as MergeIcon
 } from '@mui/icons-material';
 import SettingsContext from '../context/SettingsContext';
 
@@ -225,14 +226,24 @@ function Dashboard() {
         <Typography variant="h4" component="h1">
           Quotes
         </Typography>
-        <Button
-          component={Link}
-          to="/quote/new"
-          variant="contained"
-          startIcon={<AddIcon />}
-        >
-          New Quote
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            component={Link}
+            to="/quotes/merge"
+            variant="outlined"
+            startIcon={<MergeIcon />}
+          >
+            Unir cotizaciones
+          </Button>
+          <Button
+            component={Link}
+            to="/quote/new"
+            variant="contained"
+            startIcon={<AddIcon />}
+          >
+            New Quote
+          </Button>
+        </Box>
       </Box>
 
       {sortedQuotes.length === 0 ? (

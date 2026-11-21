@@ -1,0 +1,28 @@
+{
+  "folio_origen": "COT-3D-2026-0028",
+  "folio_salida": "IMP26-0028a",
+  "fecha_emision": "2026-10-25",
+  "cliente": "Orbal",
+  "modelo_base": "Organizador Minecraft de escritorio",
+  "regalo": false,
+  "cantidad": 1,
+  "moneda": "MXN",
+  "iva_pct": 16,
+  "descuento_pct": 35,
+  "modo_descuento": "referencial",
+  "subtotal_lista": 477,
+  "total_objetivo": 560,
+  "envio": {
+    "monto": 200,
+    "lleva_iva": false,
+    "nota_entrega": "Entrega estimada: 2 días hábiles en promedio."
+  },
+  "duracion_minutos": 1300,
+  "items": [
+    { "tipo": "filamento", "material": "PLA+", "gramos": 330, "visible": true },
+    { "tipo": "mano_obra", "texto": "Preparación", "visible": true },
+    { "tipo": "hardware", "texto": "Envío", "visible": true }
+  ],
+  "mostrar_precios_por_item": false,
+  "notas": []
+}

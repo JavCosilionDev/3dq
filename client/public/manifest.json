@@ -1,16 +1,16 @@
 {
-  "short_name": "3DQ",
-  "name": "3DQ - 3D Printing Quote Tool",
+  "short_name": "Impremática",
+  "name": "Impremática - Cotizaciones 3D",
   "icons": [
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "logo-imprematica.png",
+      "sizes": "1000x1000",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#0060FA",
   "background_color": "#121212"
 }

@@ -1,0 +1,24 @@
+{
+  "folio_origen": "COT-3D-2026-0003",
+  "folio_salida": "IMP26-0003",
+  "fecha_emision": "2026-09-23",
+  "cliente": "General",
+  "modelo_base": "Soporte Laptop hasta 16''",
+  "regalo": true,
+  "cantidad": 1,
+  "moneda": "MXN",
+  "iva_pct": 16,
+  "descuento_pct": 0,
+  "modo_descuento": "sin_descuento",
+  "subtotal_lista": 172,
+  "total_objetivo": 200,
+  "envio": { "monto": 0, "lleva_iva": false, "nota_entrega": null },
+  "duracion_minutos": 460,
+  "items": [
+    { "tipo": "filamento", "material": "PLA+", "gramos": 113, "visible": true },
+    { "tipo": "filamento", "material": "PETG", "gramos": 26, "visible": true },
+    { "tipo": "mano_obra", "texto": "Preparación", "visible": true }
+  ],
+  "mostrar_precios_por_item": false,
+  "notas": []
+}

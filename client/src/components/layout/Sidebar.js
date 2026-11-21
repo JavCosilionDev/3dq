@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { alpha } from '@mui/material/styles';
 import DynamicLogo from '../logo/DynamicLogo';
 import {
   Box,
@@ -23,7 +24,8 @@ import {
   Hardware as HardwareIcon,
   Settings as SettingsIcon,
   FlashOn as FlashOnIcon,
-  Home as HomeIcon
+  Home as HomeIcon,
+  PointOfSale as PointOfSaleIcon
 } from '@mui/icons-material';
 import SettingsContext from '../../context/SettingsContext';
 import SidebarContext from '../../context/SidebarContext';
@@ -55,6 +57,11 @@ function Sidebar() {
       text: 'Quotes',
       icon: <DescriptionIcon />,
       path: '/quotes'
+    },
+    {
+      text: 'Ventas',
+      icon: <PointOfSaleIcon />,
+      path: '/sales'
     },
     {
       text: 'Filaments',
@@ -112,9 +119,9 @@ function Sidebar() {
               selected={location.pathname === item.path}
               sx={{
                 '&.Mui-selected': {
-                  backgroundColor: 'rgba(229, 57, 53, 0.2)',
+                  backgroundColor: alpha(settings.accent_color || '#0060FA', 0.2),
                   '&:hover': {
-                    backgroundColor: 'rgba(229, 57, 53, 0.3)',
+                    backgroundColor: alpha(settings.accent_color || '#0060FA', 0.3),
                   },
                 },
                 '&:hover': {
@@ -122,7 +129,7 @@ function Sidebar() {
                 },
               }}
             >
-              <ListItemIcon sx={{ color: location.pathname === item.path ? settings.accent_color || '#E53935' : 'inherit' }}>
+              <ListItemIcon sx={{ color: location.pathname === item.path ? settings.accent_color || '#0060FA' : 'inherit' }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText primary={item.text} />

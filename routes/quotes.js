@@ -1,29 +1,11 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { getNextQuoteNumber } = require('../utils/quote-number');
 
 // Export a function that accepts a database instance
 module.exports = (db) => {
   const router = express.Router();
-
-  // Generate the next quote number using the configured prefix
-  const getNextQuoteNumber = () => {
-    const prefixSetting = db.prepare("SELECT value FROM settings WHERE key = 'quote_prefix'").get();
-    const prefix = prefixSetting?.value || '3DQ';
-    const quotes = db.prepare('SELECT quote_number FROM quotes').all();
-
-    let maxNumber = 0;
-    quotes.forEach(({ quote_number }) => {
-      if (!quote_number || !quote_number.startsWith(prefix)) return;
-
-      const numericPart = quote_number.slice(prefix.length);
-      if (/^\d+$/.test(numericPart)) {
-        maxNumber = Math.max(maxNumber, parseInt(numericPart, 10));
-      }
-    });
-
-    return `${prefix}${String(maxNumber + 1).padStart(4, '0')}`;
-  };
 
 // Get all quotes
 router.get('/', (req, res) => {
@@ -229,7 +211,7 @@ router.post('/:id/duplicate', (req, res) => {
           markup_percent, discount_percent, total_cost, quantity
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        getNextQuoteNumber(),
+        getNextQuoteNumber(db),
         sourceQuote.title,
         sourceQuote.customer_name,
         sourceQuote.date,

@@ -1,0 +1,24 @@
+{
+  "folio_origen": "COT-3D-2026-0030",
+  "folio_salida": "IMP26-0030",
+  "fecha_emision": "2026-11-06",
+  "cliente": "General",
+  "modelo_base": "Llavero Ositos Cariñositos",
+  "regalo": false,
+  "cantidad": 1,
+  "moneda": "MXN",
+  "iva_pct": 16,
+  "descuento_pct": 25,
+  "modo_descuento": "referencial",
+  "subtotal_lista": 253,
+  "total_objetivo": 220,
+  "envio": { "monto": 0, "lleva_iva": false, "nota_entrega": null },
+  "duracion_minutos": 520,
+  "items": [
+    { "tipo": "filamento", "material": "PLA+", "gramos": 85, "visible": true },
+    { "tipo": "hardware", "texto": "Llavero", "visible": true },
+    { "tipo": "mano_obra", "texto": "Preparación", "visible": true }
+  ],
+  "mostrar_precios_por_item": false,
+  "notas": []
+}

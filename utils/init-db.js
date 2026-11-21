@@ -161,13 +161,19 @@ function initDb() {
     { key: 'electricity_cost_per_kwh', value: '0.2166' },
     { key: 'labour_rate_per_hour', value: '13.00' },
     { key: 'default_markup_percent', value: '75' },
-    { key: 'currency_symbol', value: '£' },
-    { key: 'quote_prefix', value: '3DQ' },
-    { key: 'accent_color', value: '#E53935' },
-    { key: 'company_name', value: 'Prints Inc' },
+    { key: 'currency_symbol', value: '$' },
+    { key: 'quote_prefix', value: 'COT-3D-2026-' },
+    { key: 'accent_color', value: '#0060FA' },
+    { key: 'company_name', value: 'Impremática' },
     { key: 'spoolman_sync_enabled', value: 'false' },
     { key: 'spoolman_url', value: 'http://localhost:7912' },
-    { key: 'tax_rate', value: '0' }
+    { key: 'tax_rate', value: '16' },
+    { key: 'pdf_brand_name', value: 'Impremática' },
+    { key: 'pdf_brand_url', value: 'imprematica.com' },
+    { key: 'pdf_logo_path', value: 'assets/images/imprematica-logo.png' },
+    { key: 'pdf_template_version', value: 'imprematica-v1' },
+    { key: 'pdf_currency_code', value: 'MXN' },
+    { key: 'pdf_shipping_note', value: 'Entrega estimada: 2 días hábiles en promedio.' }
   ];
 
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');

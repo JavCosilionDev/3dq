@@ -21,7 +21,10 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  Chip,
+  TextField,
+  MenuItem
 } from '@mui/material';
 import {
   FileCopy as FileCopyIcon,
@@ -43,6 +46,16 @@ function ViewQuote() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [saleDialogOpen, setSaleDialogOpen] = useState(false);
+  const [savingSale, setSavingSale] = useState(false);
+  const [actionError, setActionError] = useState(null);
+  const [saleForm, setSaleForm] = useState({
+    sale_date: new Date().toISOString().slice(0, 10),
+    amount: '',
+    payment_method: 'Efectivo',
+    notes: ''
+  });
 
   // Fetch quote data
   useEffect(() => {
@@ -98,6 +111,70 @@ function ViewQuote() {
     setDeleteDialogOpen(false);
   };
 
+  const openSaleDialog = () => {
+    setSaleForm({
+      sale_date: new Date().toISOString().slice(0, 10),
+      amount: Number(quote.total_cost || 0).toFixed(2),
+      payment_method: 'Efectivo',
+      notes: ''
+    });
+    setSaleDialogOpen(true);
+  };
+
+  const closeSaleDialog = () => {
+    setSaleDialogOpen(false);
+  };
+
+  const updateSaleForm = (field, value) => {
+    setSaleForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateStatus = async (status, extra = {}) => {
+    const response = await fetch(`/api/quotes/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, ...extra })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo actualizar la venta');
+    }
+
+    setQuote(data);
+  };
+
+  const handleMarkSold = async () => {
+    setSavingSale(true);
+    setActionError(null);
+
+    try {
+      await updateStatus('sold', {
+        sale_date: saleForm.sale_date,
+        amount: Number(saleForm.amount),
+        payment_method: saleForm.payment_method,
+        notes: saleForm.notes
+      });
+      closeSaleDialog();
+    } catch (saleError) {
+      setActionError(saleError.message);
+    } finally {
+      setSavingSale(false);
+    }
+  };
+
+  const handleClearSale = async () => {
+    if (!window.confirm('¿Quitar la venta y dejar la cotización nuevamente como cotizada?')) {
+      return;
+    }
+
+    try {
+      await updateStatus('quoted');
+    } catch (saleError) {
+      setActionError(saleError.message);
+    }
+  };
+
   // Handle quote deletion
   const handleDeleteQuote = async () => {
     setDeleting(true);
@@ -122,6 +199,31 @@ function ViewQuote() {
 
   const generateInvoice = (type) => {
     window.open(`/api/quotes/${id}/invoice/${type}`, '_blank');
+  };
+
+  const generatePdf = async () => {
+    setGeneratingPdf(true);
+    setActionError(null);
+
+    try {
+      const response = await fetch(`/api/quotes/${id}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo generar el PDF');
+      }
+
+      window.open(data.url, '_blank');
+    } catch (pdfError) {
+      console.error('Error generating PDF:', pdfError);
+      setActionError(pdfError.message);
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   if (loading) {
@@ -197,10 +299,17 @@ function ViewQuote() {
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">
-          {quote.title}
-        </Typography>
-        <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h4" component="h1">
+            {quote.title}
+          </Typography>
+          <Chip
+            size="small"
+            label={quote.status === 'sold' ? 'Vendida' : quote.status === 'cancelled' ? 'Cancelada' : 'Cotizada'}
+            color={quote.status === 'sold' ? 'success' : quote.status === 'cancelled' ? 'default' : 'primary'}
+          />
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Button variant="contained" component={Link} to={`/quote/edit/${id}`} startIcon={<EditIcon />}>
             Edit Quote
           </Button>
@@ -210,12 +319,31 @@ function ViewQuote() {
           <Button variant="outlined" onClick={() => generateInvoice('internal')} startIcon={<DescriptionIcon />}>
             Internal Invoice
           </Button>
+          <Button variant="outlined" component={Link} to={`/quote/${id}/document`} startIcon={<DescriptionIcon />}>
+            Documento PDF
+          </Button>
+          <Button
+            variant="contained"
+            onClick={generatePdf}
+            startIcon={<PictureAsPdfIcon />}
+            disabled={generatingPdf}
+          >
+            {generatingPdf ? 'Generando...' : 'PDF Impremática'}
+          </Button>
+          {quote.status === 'sold' ? (
+            <Button variant="outlined" color="warning" onClick={handleClearSale}>
+              Quitar venta
+            </Button>
+          ) : (
+            <Button variant="outlined" color="success" onClick={openSaleDialog}>
+              Marcar vendida
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<FileCopyIcon />}
             onClick={handleDuplicateQuote}
             disabled={duplicating}
-            sx={{ mr: 1 }}
           >
             Duplicate
           </Button>
@@ -229,6 +357,12 @@ function ViewQuote() {
           </Button>
         </Box>
       </Box>
+
+      {actionError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setActionError(null)}>
+          {actionError}
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
         <Grid container spacing={2}>
@@ -465,6 +599,62 @@ function ViewQuote() {
         </Grid>
       </Grid>
 
+
+      {/* Sale Dialog */}
+      <Dialog open={saleDialogOpen} onClose={closeSaleDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Registrar venta</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Fecha de venta"
+                type="date"
+                fullWidth
+                value={saleForm.sale_date}
+                onChange={(event) => updateSaleForm('sale_date', event.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Importe"
+                type="number"
+                fullWidth
+                value={saleForm.amount}
+                onChange={(event) => updateSaleForm('amount', event.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Forma de pago"
+                fullWidth
+                value={saleForm.payment_method}
+                onChange={(event) => updateSaleForm('payment_method', event.target.value)}
+              >
+                <MenuItem value="Efectivo">Efectivo</MenuItem>
+                <MenuItem value="Transferencia">Transferencia</MenuItem>
+                <MenuItem value="Tarjeta">Tarjeta</MenuItem>
+                <MenuItem value="Otro">Otro</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Notas"
+                fullWidth
+                value={saleForm.notes}
+                onChange={(event) => updateSaleForm('notes', event.target.value)}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeSaleDialog}>Cancelar</Button>
+          <Button variant="contained" onClick={handleMarkSold} disabled={savingSale}>
+            {savingSale ? 'Guardando...' : 'Guardar venta'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog
