@@ -6,6 +6,7 @@ const { formatDuration } = require('./duration');
 const { formatMoney, formatGrams } = require('./money');
 
 const ROOT = path.join(__dirname, '..', '..');
+const CONFIG_DIR = process.env.CONFIG_DIR || path.join(ROOT, 'config');
 const assetCache = new Map();
 
 function escapeHtml(value) {
@@ -15,6 +16,25 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function safeColor(value) {
+  return /^#[0-9a-fA-F]{6}$/.test(String(value || '')) ? value : '#95BCFC';
+}
+
+function resolveConfigPath(value) {
+  if (!value) return null;
+  return path.isAbsolute(value) ? value : path.join(CONFIG_DIR, value);
+}
+
+function primaryImage(document) {
+  const images = Array.isArray(document.imagenes) ? document.imagenes : [];
+  return images.find((image) => image.primaria) || images[0] || null;
+}
+
+function imageSource(image) {
+  if (!image) return null;
+  return dataUri(resolveConfigPath(image.archivo), image.mime_type || 'image/png');
 }
 
 function readAsset(filePath) {
@@ -63,7 +83,15 @@ function renderConceptRows(document, items) {
 
   for (const item of items) {
     if (item.tipo === 'filamento') {
-      rows.push(`<tr><td class="description-cell" data-fit>${escapeHtml(item.material)}: ${formatGrams(item.gramos)}</td></tr>`);
+      const colorLabel = item.color ? ` · ${escapeHtml(item.color)}` : '';
+      const dot = item.color_hex
+        ? `<span class="color-dot" style="background:${safeColor(item.color_hex)}"></span>`
+        : '';
+      const purge = item.purge_grams > 0
+        ? ` <span class="purge">· purga ${formatGrams(item.purge_grams)}</span>`
+        : '';
+
+      rows.push(`<tr><td class="description-cell" data-fit><div class="concept">${dot}<span>${escapeHtml(item.material)}${colorLabel}: ${formatGrams(item.gramos)}</span>${purge}</div></td></tr>`);
     } else if (item.tipo === 'descripcion' || item.tipo === 'hardware' || item.tipo === 'mano_obra') {
       rows.push(`<tr><td class="description-cell" data-fit>${escapeHtml(item.texto)}</td></tr>`);
     }
@@ -137,6 +165,10 @@ function renderHtml(document, totalData, settings) {
     : null;
   const notes = document.notas.length > 0
     ? `<div class="notes">${document.notas.map((note) => `<div>${escapeHtml(note)}</div>`).join('')}</div>`
+    : '';
+  const photo = imageSource(primaryImage(document));
+  const productPhoto = photo
+    ? `<div class="product-photo"><img src="${photo}" alt="${escapeHtml(primaryImage(document).alt || document.modelo_base)}"></div>`
     : '';
 
   return `<!DOCTYPE html>
@@ -231,6 +263,28 @@ function renderHtml(document, totalData, settings) {
     }
     tr { break-inside: avoid; page-break-inside: avoid; }
     .description-cell { overflow-wrap: anywhere; word-break: break-word; }
+    .concept { display: flex; align-items: center; flex-wrap: wrap; gap: 5pt; }
+    .color-dot {
+      display: inline-block;
+      width: 8pt;
+      height: 8pt;
+      border-radius: 50%;
+      border: 0.75pt solid #95BCFC;
+      flex: 0 0 auto;
+    }
+    .purge { color: #666666; font-size: 9.5pt; }
+    .product-photo {
+      margin: 10pt 0 4pt 0;
+      text-align: center;
+    }
+    .product-photo img {
+      max-width: 150pt;
+      max-height: 150pt;
+      object-fit: contain;
+      border: 1px solid #DAE7FE;
+      border-radius: 4pt;
+      padding: 4pt;
+    }
     .price-cell {
       width: 22%;
       text-align: right;
@@ -278,6 +332,7 @@ function renderHtml(document, totalData, settings) {
       <div class="right">${LABELS.quantity}: <b>${document.cantidad}</b></div>
     </div>
     <div class="rule"></div>
+    ${productPhoto}
     <table>
       ${tableHeader}
       <tbody>${tableBody}</tbody>
@@ -290,4 +345,274 @@ function renderHtml(document, totalData, settings) {
 </html>`;
 }
 
-module.exports = { renderHtml, escapeHtml };
+function renderImageHtml(document, totalData, settings) {
+  const brandName = settings.pdf_brand_name || settings.company_name || LABELS.brand;
+  const brandUrl = settings.pdf_brand_url || 'imprematica.com';
+  const currencySymbol = settings.currency_symbol || '$';
+  const decimals = document.precios_incluyen_iva ? 2 : 0;
+  const logoPath = resolveAssetPath(settings.pdf_logo_path || 'assets/images/imprematica-logo.png');
+  const logo = dataUri(logoPath, 'image/png');
+  const regularFont = dataUri(path.join(ROOT, 'assets/fonts/LiberationSans-Regular.ttf'), 'font/ttf');
+  const boldFont = dataUri(path.join(ROOT, 'assets/fonts/LiberationSans-Bold.ttf'), 'font/ttf');
+  const visibleItems = document.items.filter((item) => item.visible !== false);
+  const primary = primaryImage(document);
+  const photo = imageSource(primary);
+  const model = document.regalo && !document.modelo_base.toLowerCase().includes('regalo')
+    ? `${document.modelo_base} + regalo`
+    : document.modelo_base;
+
+  const conceptRows = visibleItems.map((item) => {
+    if (item.tipo === 'filamento') {
+      const dot = `<span class="dot" style="background:${safeColor(item.color_hex)}"></span>`;
+      const name = [item.material, item.color].filter(Boolean).join(' · ');
+      const purge = item.purge_grams > 0
+        ? `<span class="muted">purga ${formatGrams(item.purge_grams)}</span>`
+        : '';
+      return `
+        <div class="line">
+          ${dot}
+          <span class="line-name">${escapeHtml(name)}</span>
+          <span class="line-value">${formatGrams(item.gramos)}</span>
+          ${purge}
+        </div>
+      `;
+    }
+
+    if (item.tipo === 'producto') {
+      return `
+        <div class="line">
+          <span class="line-name">${escapeHtml(item.texto)}</span>
+          ${document.mostrar_precios_por_item
+            ? `<span class="line-value">${formatMoney(Math.round(item.precio * 100), currencySymbol, decimals)}</span>`
+            : ''}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="line">
+        <span class="line-name">${escapeHtml(item.texto)}</span>
+      </div>
+    `;
+  }).join('');
+
+  const discountLabel = totalData.discountPercent > 0
+    ? `${LABELS.discount} (${totalData.discountPercent}%)`
+    : LABELS.discount;
+
+  const totalRows = [
+    [totalData.subtotalLabel, formatMoney(totalData.subtotal, currencySymbol, decimals)],
+    ...(totalData.showDiscount ? [[discountLabel, `-${formatMoney(totalData.discount, currencySymbol, decimals)}`]] : []),
+    ...(totalData.showNet ? [[LABELS.subtotalAfterDiscount, formatMoney(totalData.net, currencySymbol, decimals)]] : []),
+    ...(totalData.showTax ? [[`${LABELS.tax} (${totalData.taxPercent}%)`, formatMoney(totalData.tax, currencySymbol, decimals)]] : []),
+    ...(totalData.showShipping ? [[LABELS.shipping, formatMoney(totalData.shipping, currencySymbol, decimals)]] : []),
+  ].map(([label, value]) => `
+    <div class="total-row">
+      <span>${escapeHtml(label)}</span>
+      <b>${escapeHtml(value)}</b>
+    </div>
+  `).join('');
+
+  const duration = document.duracion_minutos > 0
+    ? `<span class="chip">${LABELS.duration}: ${formatDuration(document.duracion_minutos)}</span>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(brandName)} - ${escapeHtml(document.folio_salida)}</title>
+  <style>
+    @font-face {
+      font-family: 'Liberation Sans';
+      src: url('${regularFont}') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Liberation Sans';
+      src: url('${boldFont}') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #333333;
+      font-family: 'Liberation Sans', Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .card {
+      width: 780px;
+      background: #ffffff;
+      border: 1px solid #DAE7FE;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 26px 30px 20px 30px;
+      background: linear-gradient(135deg, #F4F8FF 0%, #FFFFFF 65%);
+      border-bottom: 1px solid #DAE7FE;
+    }
+    .brand-block { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 48px; height: 48px; object-fit: contain; }
+    .brand-name { font-size: 24px; font-weight: 700; line-height: 1.1; color: #0060FA; }
+    .brand-site { font-size: 12px; color: #5C6B84; margin-top: 2px; }
+    .folio { text-align: right; }
+    .folio .label { font-size: 12px; color: #5C6B84; }
+    .folio .value { font-size: 20px; font-weight: 700; color: #333333; }
+    .folio .date { font-size: 12px; color: #5C6B84; margin-top: 3px; }
+    .hero {
+      width: 100%;
+      height: 360px;
+      background: #F7FAFF;
+      border-bottom: 1px solid #DAE7FE;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .hero img { width: 100%; height: 100%; object-fit: contain; padding: 20px; }
+    .card-body { padding: 26px 30px 24px 30px; }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+      margin-bottom: 20px;
+    }
+    .meta-item span { display: block; font-size: 11px; color: #5C6B84; text-transform: uppercase; letter-spacing: 0.6px; }
+    .meta-item b { display: block; font-size: 15px; margin-top: 2px; overflow-wrap: anywhere; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .chip {
+      display: inline-block;
+      background: #DAE7FE;
+      color: #0B4AA8;
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0060FA;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid #DAE7FE;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .lines { margin-bottom: 20px; }
+    .line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      border-bottom: 1px solid #EEF4FF;
+      font-size: 14px;
+    }
+    .line:last-child { border-bottom: none; }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid #95BCFC;
+      flex: 0 0 auto;
+    }
+    .line-name { flex: 1; overflow-wrap: anywhere; }
+    .line-value { font-weight: 700; white-space: nowrap; }
+    .muted { color: #6B778C; font-size: 12px; }
+    .totals {
+      background: #F7FAFF;
+      border: 1px solid #DAE7FE;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-left: auto;
+      width: 340px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 4px 0;
+      font-size: 13px;
+      color: #39465C;
+    }
+    .total-row b { color: #333333; }
+    .total-final {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #95BCFC;
+      margin-top: 10px;
+      padding-top: 12px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #0060FA;
+    }
+    .total-final span { color: #333333; font-size: 15px; }
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 30px;
+      border-top: 1px solid #DAE7FE;
+      background: #F7FAFF;
+      color: #5C6B84;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-head">
+      <div class="brand-block">
+        ${logo ? `<img class="logo" src="${logo}" alt="${escapeHtml(brandName)}">` : ''}
+        <div>
+          <div class="brand-name">${escapeHtml(brandName)}</div>
+          <div class="brand-site">${escapeHtml(brandUrl)}</div>
+        </div>
+      </div>
+      <div class="folio">
+        <div class="label">${LABELS.printNumber}</div>
+        <div class="value">${escapeHtml(document.folio_salida)}</div>
+        <div class="date">${formatDate(document.fecha_emision)}</div>
+      </div>
+    </div>
+    ${photo ? `<div class="hero"><img src="${photo}" alt="${escapeHtml(primary.alt || document.modelo_base)}"></div>` : ''}
+    <div class="card-body">
+      <div class="meta-grid">
+        <div class="meta-item"><span>${LABELS.client}</span><b>${escapeHtml(document.cliente)}</b></div>
+        <div class="meta-item"><span>${LABELS.quantity}</span><b>${document.cantidad}</b></div>
+        <div class="meta-item"><span>${LABELS.model}</span><b>${escapeHtml(model)}</b></div>
+        <div class="meta-item"><span>${LABELS.date}</span><b>${formatDate(document.fecha_emision)}</b></div>
+      </div>
+      ${duration ? `<div class="chips">${duration}</div>` : ''}
+      <div class="section-title">${LABELS.description}</div>
+      <div class="lines">${conceptRows}</div>
+      <div class="totals">
+        ${totalRows}
+        <div class="total-final">
+          <span>${LABELS.total}</span>
+          <b>${formatMoney(totalData.total, currencySymbol, decimals)}</b>
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <span>${escapeHtml(brandName)}</span>
+      <span>${escapeHtml(brandUrl)}</span>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+module.exports = { renderHtml, renderImageHtml, escapeHtml };

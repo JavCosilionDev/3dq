@@ -1,161 +1,221 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  Alert,
   Box,
   Button,
-  Card,
-  CardContent,
-  Grid,
-  Typography,
-  Divider,
-  Paper,
+  Chip,
   CircularProgress,
-  Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
+  Grid,
+  IconButton,
+  Menu,
+  MenuItem,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Chip,
   TextField,
-  MenuItem
+  Typography
 } from '@mui/material';
 import {
-  FileCopy as FileCopyIcon,
+  Add as AddIcon,
+  ArrowBack as ArrowBackIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon
+  Description as DescriptionIcon,
+  Download as DownloadIcon,
+  Edit as EditIcon,
+  FileCopy as FileCopyIcon,
+  Image as ImageIcon,
+  MoreVert as MoreVertIcon,
+  PictureAsPdf as PictureAsPdfIcon,
+  PointOfSale as PointOfSaleIcon
 } from '@mui/icons-material';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import DescriptionIcon from '@mui/icons-material/Description'; // Added for invoice buttons
 import SettingsContext from '../context/SettingsContext';
+
+function money(value, symbol = '$') {
+  return `${symbol}${(Number(value) || 0).toFixed(2)}`;
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const [year, month, day] = String(value).split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function formatPrintTime(totalMinutes) {
+  if (!totalMinutes) return '0m';
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  return [
+    days > 0 ? `${days}d` : null,
+    hours > 0 ? `${hours}h` : null,
+    minutes > 0 ? `${minutes}m` : null,
+  ].filter(Boolean).join(' ') || '0m';
+}
+
+function imageSrc(quoteId, image) {
+  if (!image || !image.id) return '';
+  return `/api/quotes/${quoteId}/images/${image.id}/file?v=${(image.sha256 || '').slice(0, 10)}`;
+}
 
 function ViewQuote() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { settings } = useContext(SettingsContext);
-  
+  const { settings } = React.useContext(SettingsContext);
+  const currency = settings.currency_symbol || '$';
+
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [actionError, setActionError] = useState(null);
   const [duplicating, setDuplicating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [generatingPng, setGeneratingPng] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [savingSale, setSavingSale] = useState(false);
-  const [actionError, setActionError] = useState(null);
+  const [menuAnchor, setMenuAnchor] = useState(null);
   const [saleForm, setSaleForm] = useState({
     sale_date: new Date().toISOString().slice(0, 10),
     amount: '',
-    payment_method: 'Efectivo',
+    payment_method: 'Transferencia',
+    bank_reference: '',
+    iva_amount: '',
     notes: ''
   });
 
-  // Fetch quote data
-  useEffect(() => {
-    const fetchQuote = async () => {
-      try {
-        const response = await fetch(`/api/quotes/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch quote');
-        }
-        const data = await response.json();
-        setQuote(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching quote:', error);
-        setError(error.message);
-        setLoading(false);
-      }
-    };
+  const loadQuote = async () => {
+    const response = await fetch(`/api/quotes/${id}`);
+    const data = await response.json();
 
-    fetchQuote();
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo cargar la cotización');
+    }
+
+    setQuote(data);
+    return data;
+  };
+
+  useEffect(() => {
+    loadQuote()
+      .catch((loadError) => setError(loadError.message))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Handle quote duplication
   const handleDuplicateQuote = async () => {
     setDuplicating(true);
+    setMenuAnchor(null);
     try {
-      const response = await fetch(`/api/quotes/${id}/duplicate`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to duplicate quote');
-      }
-      
-      const newQuote = await response.json();
-      
-      // Navigate to the new quote
-      navigate(`/quote/${newQuote.id}`);
-    } catch (error) {
-      console.error('Error duplicating quote:', error);
-      setError(error.message);
+      const response = await fetch(`/api/quotes/${id}/duplicate`, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo duplicar');
+      navigate(`/quote/${data.id}`);
+    } catch (duplicateError) {
+      setActionError(duplicateError.message);
+    } finally {
       setDuplicating(false);
     }
   };
 
-  // Open delete confirmation dialog
-  const openDeleteDialog = () => {
-    setDeleteDialogOpen(true);
+  const handleDeleteQuote = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('No se pudo eliminar la cotización');
+      navigate('/quotes');
+    } catch (deleteError) {
+      setActionError(deleteError.message);
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
   };
 
-  // Close delete confirmation dialog
-  const closeDeleteDialog = () => {
-    setDeleteDialogOpen(false);
+  const generatePdf = async (download = false) => {
+    setGeneratingPdf(true);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/quotes/${id}/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo generar el PDF');
+      window.open(download ? `${data.url}?download=1` : data.url, '_blank');
+    } catch (pdfError) {
+      setActionError(pdfError.message);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const generatePng = async () => {
+    setGeneratingPng(true);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/quotes/${id}/png`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo generar la imagen');
+      window.open(`${data.url}?download=1`, '_blank');
+    } catch (pngError) {
+      setActionError(pngError.message);
+    } finally {
+      setGeneratingPng(false);
+    }
   };
 
   const openSaleDialog = () => {
+    const total = Number(quote?.total_cost) || 0;
+    const sold = (quote?.sales || []).reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
+    const remaining = Math.max(0, total - sold);
+
     setSaleForm({
       sale_date: new Date().toISOString().slice(0, 10),
-      amount: Number(quote.total_cost || 0).toFixed(2),
-      payment_method: 'Efectivo',
+      amount: Number(remaining || total).toFixed(2),
+      payment_method: 'Transferencia',
+      bank_reference: '',
+      iva_amount: '',
       notes: ''
     });
     setSaleDialogOpen(true);
   };
 
-  const closeSaleDialog = () => {
-    setSaleDialogOpen(false);
-  };
-
-  const updateSaleForm = (field, value) => {
+  const updateSaleField = (field, value) => {
     setSaleForm((current) => ({ ...current, [field]: value }));
   };
 
-  const updateStatus = async (status, extra = {}) => {
-    const response = await fetch(`/api/quotes/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, ...extra })
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'No se pudo actualizar la venta');
-    }
-
-    setQuote(data);
-  };
-
-  const handleMarkSold = async () => {
+  const handleSaveSale = async () => {
     setSavingSale(true);
     setActionError(null);
-
     try {
-      await updateStatus('sold', {
-        sale_date: saleForm.sale_date,
-        amount: Number(saleForm.amount),
-        payment_method: saleForm.payment_method,
-        notes: saleForm.notes
+      const response = await fetch(`/api/quotes/${id}/sales`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...saleForm,
+          iva_amount: saleForm.iva_amount === '' ? undefined : Number(saleForm.iva_amount)
+        })
       });
-      closeSaleDialog();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo registrar la venta');
+      await loadQuote();
+      setSaleDialogOpen(false);
     } catch (saleError) {
       setActionError(saleError.message);
     } finally {
@@ -163,66 +223,19 @@ function ViewQuote() {
     }
   };
 
-  const handleClearSale = async () => {
-    if (!window.confirm('¿Quitar la venta y dejar la cotización nuevamente como cotizada?')) {
+  const handleDeleteSale = async (sale) => {
+    if (!window.confirm(`¿Eliminar la venta del ${formatDate(sale.sale_date)} por ${money(sale.amount, currency)}?`)) {
       return;
     }
 
+    setActionError(null);
     try {
-      await updateStatus('quoted');
+      const response = await fetch(`/api/sales/${sale.id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo eliminar la venta');
+      await loadQuote();
     } catch (saleError) {
       setActionError(saleError.message);
-    }
-  };
-
-  // Handle quote deletion
-  const handleDeleteQuote = async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch(`/api/quotes/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete quote');
-      }
-      
-      // Navigate back to quotes list
-      navigate('/');
-    } catch (error) {
-      console.error('Error deleting quote:', error);
-      setError(error.message);
-      setDeleting(false);
-      closeDeleteDialog();
-    }
-  };
-
-  const generateInvoice = (type) => {
-    window.open(`/api/quotes/${id}/invoice/${type}`, '_blank');
-  };
-
-  const generatePdf = async (download = false) => {
-    setGeneratingPdf(true);
-    setActionError(null);
-
-    try {
-      const response = await fetch(`/api/quotes/${id}/pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'No se pudo generar el PDF');
-      }
-
-      window.open(download ? `${data.url}?download=1` : data.url, '_blank');
-    } catch (pdfError) {
-      console.error('Error generating PDF:', pdfError);
-      setActionError(pdfError.message);
-    } finally {
-      setGeneratingPdf(false);
     }
   };
 
@@ -235,143 +248,109 @@ function ViewQuote() {
   }
 
   if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 4 }}>
-        Error: {error}
-      </Alert>
-    );
+    return <Alert severity="error">{error}</Alert>;
   }
 
   if (!quote) {
-    return (
-      <Alert severity="warning" sx={{ mb: 4 }}>
-        Quote not found
-      </Alert>
-    );
+    return <Alert severity="warning">Cotización no encontrada</Alert>;
   }
 
-  // Get quantity (default to 1 if not set)
-  const quantity = quote.quantity || 1;
-
-  // Calculate per-unit totals
-  const filamentTotal = quote.filaments ? quote.filaments.reduce((sum, f) => sum + f.total_cost, 0) : 0;
-  const hardwareTotal = quote.hardware ? quote.hardware.reduce((sum, h) => sum + h.total_cost, 0) : 0;
-  const powerCost = quote.print_setup ? quote.print_setup.power_cost : 0;
-  const depreciationCost = quote.print_setup ? quote.print_setup.depreciation_cost : 0;
-  const labourCost = quote.labour ? quote.labour.total_cost : 0;
-  
-  // Calculate per-unit production cost (excluding labour)
-  const perUnitProductionCost = filamentTotal + hardwareTotal + powerCost + depreciationCost;
-  // Calculate per-unit subtotal (including labour)
-  const perUnitSubtotal = perUnitProductionCost + labourCost;
-  
-  // Apply quantity to get total production cost and subtotal
-  const totalProductionCost = perUnitProductionCost * quantity;
-  const subtotal = perUnitSubtotal * quantity;
-  
-  // Apply markup, discount on the total subtotal
-  const markup = subtotal * (quote.markup_percent / 100);
-  const afterMarkup = subtotal + markup;
-  const discount = afterMarkup * (quote.discount_percent / 100);
-  const afterDiscount = afterMarkup - discount;
-  
-  // Calculate tax if tax rate is greater than 0
-  const taxRate = parseFloat(settings.tax_rate) || 0;
-  const taxAmount = taxRate > 0 ? afterDiscount * (taxRate / 100) : 0;
-  const hasBreakdown = Boolean(
-    quote.filaments?.length
-    || quote.hardware?.length
-    || quote.print_setup
-    || quote.labour
+  const quantity = Number(quote.quantity) || 1;
+  const filaments = quote.filaments || [];
+  const hardware = quote.hardware || [];
+  const sales = quote.sales || [];
+  const images = quote.images || [];
+  const documentData = quote.document || null;
+  const isMerged = Boolean(
+    (quote.source_quotes && quote.source_quotes.length > 1)
+    || (documentData?.items || []).some((item) => item.tipo === 'producto')
   );
-  const finalTotal = hasBreakdown
-    ? afterDiscount + taxAmount
-    : Number(quote.total_cost) || 0;
+  const hasBreakdown = Boolean(filaments.length || hardware.length || quote.print_setup || quote.labour);
+  const primaryImage = images.find((image) => image.is_primary) || images[0] || null;
 
-  const formatPrintTime = (totalMinutes) => {
-    if (totalMinutes === null || totalMinutes === undefined || totalMinutes === 0) {
-      return 'N/A';
-    }
-    const days = Math.floor(totalMinutes / (24 * 60));
-    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-    const minutes = totalMinutes % 60;
-    
-    let formattedTime = '';
-    if (days > 0) formattedTime += `${days}d `;
-    if (hours > 0) formattedTime += `${hours}h `;
-    if (minutes > 0) formattedTime += `${minutes}m`;
-    
-    return formattedTime.trim() || '0m';
-  };
+  const filamentTotal = filaments.reduce((sum, item) => sum + Number(item.total_cost || 0), 0);
+  const hardwareTotal = hardware.reduce((sum, item) => sum + Number(item.total_cost || 0), 0);
+  const powerCost = Number(quote.print_setup?.power_cost || 0);
+  const depreciationCost = Number(quote.print_setup?.depreciation_cost || 0);
+  const labourCost = Number(quote.labour?.total_cost || 0);
+  const productionCost = (filamentTotal + hardwareTotal + powerCost + depreciationCost + labourCost) * quantity;
+  const total = Number(quote.total_cost) || 0;
+  const soldTotal = sales.reduce((sum, sale) => sum + Number(sale.amount || 0), 0);
+  const ivaTotal = sales.reduce((sum, sale) => sum + Number(sale.iva_amount || 0), 0);
+  const netTotal = sales.reduce((sum, sale) => sum + Number(sale.subtotal || 0), 0);
+  const balance = total - soldTotal;
+  const taxRate = Number(documentData?.iva_pct ?? settings.tax_rate) || 0;
+  const estimatedIva = quotedIva(total, taxRate);
+  const soldCount = sales.length;
+  const statusCode = quote.status || (soldCount > 0 ? 'sold' : 'quoted');
+  const statusLabel = statusCode === 'cancelled'
+    ? 'Cancelada'
+    : statusCode === 'sold' || soldCount > 0
+      ? `Vendidos: ${soldCount || 1}`
+      : 'Cotizada';
+  const statusColor = statusCode === 'cancelled' ? 'default' : (soldCount > 0 || statusCode === 'sold') ? 'success' : 'primary';
+  const documentProducts = (documentData?.items || []).filter((item) => item.tipo === 'producto');
+  const totalFilamentGrams = filaments.reduce((sum, item) => sum + Number(item.grams_used || 0), 0);
+  const totalPurgeGrams = filaments.reduce((sum, item) => sum + Number(item.purge_grams || 0), 0);
 
   return (
     <Box>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h4" component="h1">
-            {quote.title}
-          </Typography>
-          <Chip
-            size="small"
-            label={quote.status === 'sold' ? 'Vendida' : quote.status === 'cancelled' ? 'Cancelada' : 'Cotizada'}
-            color={quote.status === 'sold' ? 'success' : quote.status === 'cancelled' ? 'default' : 'primary'}
-          />
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Button variant="contained" component={Link} to={`/quote/edit/${id}`} startIcon={<EditIcon />}>
-            Edit Quote
-          </Button>
-          <Button variant="outlined" onClick={() => generateInvoice('client')} startIcon={<DescriptionIcon />}>
-            Client Invoice
-          </Button>
-          <Button variant="outlined" onClick={() => generateInvoice('internal')} startIcon={<DescriptionIcon />}>
-            Internal Invoice
-          </Button>
-          <Button variant="outlined" component={Link} to={`/quote/${id}/document`} startIcon={<DescriptionIcon />}>
-            Documento PDF
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => generatePdf(false)}
-            startIcon={<PictureAsPdfIcon />}
-            disabled={generatingPdf}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+        <IconButton component={Link} to="/quotes" aria-label="Volver a cotizaciones">
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h4" component="h1" sx={{ flexGrow: 1, minWidth: 220 }}>
+          {quote.title}
+        </Typography>
+        <Chip size="small" label={statusLabel} color={statusColor} />
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 3 }}>
+        <Button
+          variant="contained"
+          component={Link}
+          to={hasBreakdown ? `/quote/edit/${id}` : `/quote/${id}/document`}
+          startIcon={<EditIcon />}
+        >
+          {hasBreakdown ? 'Editar cotización' : 'Editar documento'}
+        </Button>
+        <Button variant="outlined" component={Link} to={`/quote/${id}/document`} startIcon={<DescriptionIcon />}>
+          Documento PDF
+        </Button>
+        <Button variant="outlined" onClick={() => generatePdf(false)} startIcon={<PictureAsPdfIcon />} disabled={generatingPdf}>
+          {generatingPdf ? 'Generando...' : 'Ver PDF'}
+        </Button>
+        <Button variant="outlined" onClick={() => generatePdf(true)} startIcon={<DownloadIcon />} disabled={generatingPdf}>
+          Descargar PDF
+        </Button>
+        <Button variant="outlined" onClick={generatePng} startIcon={<ImageIcon />} disabled={generatingPng}>
+          {generatingPng ? 'Generando...' : 'Descargar PNG'}
+        </Button>
+        <Button variant="contained" color="success" onClick={openSaleDialog} startIcon={<PointOfSaleIcon />}>
+          Registrar venta
+        </Button>
+        <IconButton
+          aria-label="Más acciones"
+          onClick={(event) => setMenuAnchor(event.currentTarget)}
+        >
+          <MoreVertIcon />
+        </IconButton>
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+          <MenuItem onClick={handleDuplicateQuote} disabled={duplicating}>
+            <FileCopyIcon fontSize="small" sx={{ mr: 1 }} />
+            {duplicating ? 'Duplicando...' : 'Duplicar cotización'}
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              setDeleteDialogOpen(true);
+            }}
+            sx={{ color: 'error.main' }}
           >
-            {generatingPdf ? 'Generando...' : 'PDF Impremática'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => generatePdf(true)}
-            startIcon={<PictureAsPdfIcon />}
-            disabled={generatingPdf}
-          >
-            Descargar PDF
-          </Button>
-          {quote.status === 'sold' ? (
-            <Button variant="outlined" color="warning" onClick={handleClearSale}>
-              Quitar venta
-            </Button>
-          ) : (
-            <Button variant="outlined" color="success" onClick={openSaleDialog}>
-              Marcar vendida
-            </Button>
-          )}
-          <Button
-            variant="outlined"
-            startIcon={<FileCopyIcon />}
-            onClick={handleDuplicateQuote}
-            disabled={duplicating}
-          >
-            Duplicate
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={openDeleteDialog}
-          >
-            Delete
-          </Button>
-        </Box>
+            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+            Eliminar cotización
+          </MenuItem>
+        </Menu>
       </Box>
 
       {actionError && (
@@ -380,255 +359,354 @@ function ViewQuote() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1">Quote Number</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{quote.quote_number}</Typography>
-            
-            <Typography variant="subtitle1">Customer</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{quote.customer_name}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1">Date</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{quote.date}</Typography>
-            
-            <Typography variant="subtitle1">Quantity</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>{quantity}</Typography>
-          </Grid>
-          {quote.notes && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Notes</Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>{quote.notes}</Typography>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="body2" color="text.secondary">Total cotizado</Typography>
+            <Typography variant="h5" fontWeight="bold">{money(total, currency)}</Typography>
+            <Typography variant="caption" color="text.secondary">{quote.quote_number}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="body2" color="text.secondary">Vendido</Typography>
+            <Typography variant="h5" fontWeight="bold">{money(soldTotal, currency)}</Typography>
+            <Typography variant="caption" color="text.secondary">{soldCount} {soldCount === 1 ? 'venta' : 'ventas'}</Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="body2" color="text.secondary">IVA de ventas</Typography>
+            <Typography variant="h5" fontWeight="bold">{money(ivaTotal, currency)}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {sales.length > 0 ? `Neto ${money(netTotal, currency)}` : `Estimado ${money(estimatedIva, currency)}`}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="body2" color="text.secondary">Saldo</Typography>
+            <Typography variant="h5" fontWeight="bold" color={balance > 0 ? 'warning.main' : 'success.main'}>
+              {money(balance, currency)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {balance > 0 ? 'Pendiente de cobro' : 'Cobrado'}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={8}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Datos del cliente</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary">Cliente</Typography>
+                <Typography>{quote.customer_name}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary">Fecha</Typography>
+                <Typography>{formatDate(quote.date)}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary">Cantidad</Typography>
+                <Typography>{quantity}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Typography variant="caption" color="text.secondary">Ventas</Typography>
+                <Typography>{soldCount}</Typography>
+              </Grid>
+              {quote.notes && (
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary">Notas</Typography>
+                  <Typography variant="body2">{quote.notes}</Typography>
+                </Grid>
+              )}
             </Grid>
-          )}
-        </Grid>
-      </Paper>
+          </Paper>
 
-      {/* Filament Section */}
-      {quote.filaments && quote.filaments.length > 0 && (
-        <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Filament Usage</Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Material</TableCell>
-                  <TableCell align="right">Weight (g)</TableCell>
-                  <TableCell align="right">Price per gram</TableCell>
-                  <TableCell align="right">Cost</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {quote.filaments.map((filament, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{filament.filament_name}</TableCell>
-                    <TableCell align="right">{filament.grams_used}</TableCell>
-                    <TableCell align="right">
-                      {settings.currency_symbol}{filament.filament_price_per_gram.toFixed(4)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {settings.currency_symbol}{filament.total_cost.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell colSpan={3} align="right"><strong>Total Filament Cost</strong></TableCell>
-                  <TableCell align="right">
-                    <strong>{settings.currency_symbol}{filamentTotal.toFixed(2)}</strong>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Hardware Section */}
-      {quote.hardware && quote.hardware.length > 0 && (
-        <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Hardware</Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Item</TableCell>
-                  <TableCell align="right">Quantity</TableCell>
-                  <TableCell align="right">Unit Price</TableCell>
-                  <TableCell align="right">Cost</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {quote.hardware.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.hardware_name}</TableCell>
-                    <TableCell align="right">{item.quantity}</TableCell>
-                    <TableCell align="right">
-                      {settings.currency_symbol}{item.unit_price.toFixed(2)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {settings.currency_symbol}{item.total_cost.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell colSpan={3} align="right"><strong>Total Hardware Cost</strong></TableCell>
-                  <TableCell align="right">
-                    <strong>{settings.currency_symbol}{hardwareTotal.toFixed(2)}</strong>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Print Setup Section */}
-      {quote.print_setup && (
-        <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Print Setup</Typography>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {quote.print_setup.printer_name} - Print Duration: {formatPrintTime(quote.print_setup.print_time)}
-          </Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Item</TableCell>
-                  <TableCell align="right">Cost</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                <TableRow>
-                  <TableCell>Power Cost</TableCell>
-                  <TableCell align="right">
-                    {settings.currency_symbol}{quote.print_setup.power_cost.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>Depreciation Cost</TableCell>
-                  <TableCell align="right">
-                    {settings.currency_symbol}{quote.print_setup.depreciation_cost.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell><strong>Total Print Setup Cost</strong></TableCell>
-                  <TableCell align="right">
-                    <strong>
-                      {settings.currency_symbol}
-                      {(quote.print_setup.power_cost + quote.print_setup.depreciation_cost).toFixed(2)}
-                    </strong>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Labour Section */}
-      {quote.labour && (
-        <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.paper' }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Labour</Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Task Type</TableCell>
-                  <TableCell align="right">Time Spent (min)</TableCell>
-                  <TableCell align="right">Hourly Rate</TableCell>
-                  <TableCell align="right">Task Cost</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {[
-                  { name: 'Design', minutes: quote.labour.design_minutes },
-                  { name: 'Preparation', minutes: quote.labour.preparation_minutes },
-                  { name: 'Post Processing', minutes: quote.labour.post_processing_minutes },
-                  { name: 'Other', minutes: quote.labour.other_minutes },
-                ]
-                .filter(task => task.minutes > 0)
-                .map((task, index) => {
-                  const taskCost = (task.minutes / 60) * quote.labour.labour_rate_per_hour;
-                  return (
-                    <TableRow key={index}>
-                      <TableCell>{task.name}</TableCell>
-                      <TableCell align="right">{task.minutes}</TableCell>
-                      <TableCell align="right">
-                        {settings.currency_symbol}{quote.labour.labour_rate_per_hour.toFixed(2)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {settings.currency_symbol}{taskCost.toFixed(2)}
-                      </TableCell>
+          {isMerged && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>Productos del documento</Typography>
+              {documentProducts.length > 0 ? (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Producto</TableCell>
+                      <TableCell align="right">Precio</TableCell>
                     </TableRow>
-                  );
-                })}
-                <TableRow>
-                  <TableCell colSpan={3} align="right"><strong>Total Labour Cost</strong></TableCell>
-                  <TableCell align="right">
-                    <strong>{settings.currency_symbol}{labourCost.toFixed(2)}</strong>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Cost Summary Title */}
-      <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Cost Summary</Typography>
-      {hasBreakdown ? (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          {/* Left Box: Cost Breakdown */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Cost Breakdown</Typography>
-              <Typography variant="body2">Filament: {settings.currency_symbol}{filamentTotal.toFixed(2)}</Typography>
-              <Typography variant="body2">Hardware: {settings.currency_symbol}{hardwareTotal.toFixed(2)}</Typography>
-              <Typography variant="body2">Power: {settings.currency_symbol}{powerCost.toFixed(2)}</Typography>
-              <Typography variant="body2">Printer Depreciation: {settings.currency_symbol}{depreciationCost.toFixed(2)}</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Production Cost: {settings.currency_symbol}{totalProductionCost.toFixed(2)}</Typography>
-              <Typography variant="body2">Labour: {settings.currency_symbol}{labourCost.toFixed(2)}</Typography>
+                  </TableHead>
+                  <TableBody>
+                    {documentProducts.map((item, index) => (
+                      <TableRow key={`${item.texto}-${index}`}>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">{item.texto}</Typography>
+                          {(item.detalle || []).map((line) => (
+                            <Typography key={line} variant="caption" color="text.secondary" display="block">
+                              {line}
+                            </Typography>
+                          ))}
+                        </TableCell>
+                        <TableCell align="right">{money(item.precio, currency)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Esta cotización combina varios productos. El detalle está en el documento.
+                </Typography>
+              )}
+              {(quote.source_quotes || []).length > 0 && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                    Cotizaciones origen:
+                  </Typography>
+                  {quote.source_quotes.map((source) => (
+                    <Chip
+                      key={source.id}
+                      size="small"
+                      label={source.quote_number}
+                      component={Link}
+                      to={`/quote/${source.id}`}
+                      clickable
+                    />
+                  ))}
+                </Box>
+              )}
             </Paper>
-          </Grid>
+          )}
 
-          {/* Right Box: Financial Summary */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3, backgroundColor: 'background.paper', height: '100%' }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Financial Summary</Typography>
-              {quantity > 1 && (
-                <>
-                  <Typography variant="body2">Per Unit Production Cost: {settings.currency_symbol}{perUnitProductionCost.toFixed(2)}</Typography>
-                  <Typography variant="body2">Per Unit Subtotal: {settings.currency_symbol}{perUnitSubtotal.toFixed(2)}</Typography>
-                </>
+          {hasBreakdown && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>Materiales y producción</Typography>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Costo de producción</Typography>
+                  <Typography fontWeight="bold">{money(productionCost, currency)}</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Filamento</Typography>
+                  <Typography fontWeight="bold">{totalFilamentGrams.toFixed(2)} g</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Purga</Typography>
+                  <Typography fontWeight="bold">{totalPurgeGrams.toFixed(2)} g</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Margen</Typography>
+                  <Typography fontWeight="bold">{Number(quote.markup_percent || 0)}%</Typography>
+                </Grid>
+              </Grid>
+
+              {filaments.length > 0 && (
+                <TableContainer sx={{ mb: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Material / color</TableCell>
+                        <TableCell align="right">Usado</TableCell>
+                        <TableCell align="right">Purga</TableCell>
+                        <TableCell align="right">Costo</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filaments.map((filament) => (
+                        <TableRow key={filament.id}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  backgroundColor: filament.color_hex || '#95BCFC',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  flex: '0 0 auto'
+                                }}
+                              />
+                              <span>
+                                {filament.material || filament.filament_name}
+                                {filament.color_name ? ` · ${filament.color_name}` : ''}
+                              </span>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">{Number(filament.grams_used || 0).toFixed(2)} g</TableCell>
+                          <TableCell align="right">{Number(filament.purge_grams || 0).toFixed(2)} g</TableCell>
+                          <TableCell align="right">{money(filament.total_cost, currency)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
-              <Typography variant="body2">Total Subtotal (Qty {quantity}): {settings.currency_symbol}{subtotal.toFixed(2)}</Typography>
-              <Typography variant="body2">Markup ({quote.markup_percent}%): +{settings.currency_symbol}{markup.toFixed(2)}</Typography>
-              {quote.discount_percent > 0 && (
-                <Typography variant="body2" sx={{ color: 'error.main' }}>Discount ({quote.discount_percent}%): -{settings.currency_symbol}{discount.toFixed(2)}</Typography>
+
+              {quote.print_setup && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {quote.print_setup.printer_name} · {formatPrintTime(quote.print_setup.print_time)} · Energía {money(powerCost, currency)} · Depreciación {money(depreciationCost, currency)}
+                </Typography>
               )}
-              {taxRate > 0 && (
-                <Typography variant="body2">Tax ({taxRate}%): +{settings.currency_symbol}{taxAmount.toFixed(2)}</Typography>
+
+              {hardware.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Hardware: {hardware.map((item) => `${item.hardware_name} ×${item.quantity}`).join(', ')}
+                </Typography>
               )}
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Final Price: {settings.currency_symbol}{finalTotal.toFixed(2)}</Typography>
+
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Subtotal</Typography>
+                  <Typography>{money(total - estimatedIva, currency)}</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">IVA ({taxRate}%)</Typography>
+                  <Typography>{money(estimatedIva, currency)}</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Descuento</Typography>
+                  <Typography>{Number(quote.discount_percent || 0)}%</Typography>
+                </Grid>
+                <Grid item xs={6} sm={3}>
+                  <Typography variant="caption" color="text.secondary">Total</Typography>
+                  <Typography fontWeight="bold">{money(total, currency)}</Typography>
+                </Grid>
+              </Grid>
             </Paper>
-          </Grid>
+          )}
+
+          <Paper sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="h6">Ventas</Typography>
+              <Button size="small" startIcon={<AddIcon />} onClick={openSaleDialog}>Registrar venta</Button>
+            </Box>
+            {sales.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Aún no hay ventas registradas. Puedes registrar varias ventas para esta cotización.
+              </Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Fecha</TableCell>
+                      <TableCell>Forma de pago</TableCell>
+                      <TableCell>Referencia bancaria</TableCell>
+                      <TableCell align="right">Subtotal</TableCell>
+                      <TableCell align="right">IVA</TableCell>
+                      <TableCell align="right">Total</TableCell>
+                      <TableCell align="right">Quitar</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {sales.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell>{formatDate(sale.sale_date)}</TableCell>
+                        <TableCell>{sale.payment_method || '-'}</TableCell>
+                        <TableCell>{sale.bank_reference || '-'}</TableCell>
+                        <TableCell align="right">{money(sale.subtotal, currency)}</TableCell>
+                        <TableCell align="right">{money(sale.iva_amount, currency)}</TableCell>
+                        <TableCell align="right"><strong>{money(sale.amount, currency)}</strong></TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" color="error" onClick={() => handleDeleteSale(sale)} aria-label="Eliminar venta">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={3} align="right"><strong>Total</strong></TableCell>
+                      <TableCell align="right"><strong>{money(netTotal, currency)}</strong></TableCell>
+                      <TableCell align="right"><strong>{money(ivaTotal, currency)}</strong></TableCell>
+                      <TableCell align="right"><strong>{money(soldTotal, currency)}</strong></TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
         </Grid>
-      ) : (
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="body1">
-            Esta cotización combina varios productos. El detalle y los precios están en el documento PDF.
-          </Typography>
-          <Typography variant="h6" sx={{ mt: 1, fontWeight: 'bold' }}>
-            Total: {settings.currency_symbol}{finalTotal.toFixed(2)}
-          </Typography>
-        </Paper>
-      )}
 
+        <Grid item xs={12} lg={4}>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Imagen del producto</Typography>
+              <Button size="small" component={Link} to={`/quote/${id}/document`}>Gestionar</Button>
+            </Box>
+            {primaryImage ? (
+              <Box
+                component="img"
+                src={imageSrc(id, primaryImage)}
+                alt={primaryImage.alt || quote.title}
+                sx={{
+                  width: '100%',
+                  maxHeight: 300,
+                  objectFit: 'contain',
+                  backgroundColor: 'background.default',
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  p: 1
+                }}
+              />
+            ) : (
+              <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 2, p: 3, textAlign: 'center', color: 'text.secondary' }}>
+                <ImageIcon sx={{ fontSize: 36, mb: 1 }} />
+                <Typography variant="body2">Sin imagen principal</Typography>
+              </Box>
+            )}
+            {images.length > 1 && (
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(54px, 1fr))', gap: 1, mt: 2 }}>
+                {images.map((image) => (
+                  <Box
+                    key={image.id}
+                    component="img"
+                    src={imageSrc(id, image)}
+                    alt={image.alt || image.filename}
+                    sx={{
+                      width: '100%',
+                      height: 54,
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                      border: image.is_primary ? '2px solid' : '1px solid',
+                      borderColor: image.is_primary ? 'primary.main' : 'divider'
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+          </Paper>
 
-      {/* Sale Dialog */}
-      <Dialog open={saleDialogOpen} onClose={closeSaleDialog} maxWidth="sm" fullWidth>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>Resumen de cuenta</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Total cotizado</Typography>
+              <Typography variant="body2">{money(total, currency)}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">Subtotal vendido</Typography>
+              <Typography variant="body2">{money(netTotal, currency)}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2">IVA vendido</Typography>
+              <Typography variant="body2">{money(ivaTotal, currency)}</Typography>
+            </Box>
+            <Divider sx={{ my: 1 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" fontWeight="bold">Saldo</Typography>
+              <Typography variant="body2" fontWeight="bold">{money(balance, currency)}</Typography>
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              El IVA de cada venta se guarda por separado para contabilidad.
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      <Dialog open={saleDialogOpen} onClose={() => setSaleDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Registrar venta</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -638,17 +716,17 @@ function ViewQuote() {
                 type="date"
                 fullWidth
                 value={saleForm.sale_date}
-                onChange={(event) => updateSaleForm('sale_date', event.target.value)}
+                onChange={(event) => updateSaleField('sale_date', event.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Importe"
+                label="Importe total"
                 type="number"
                 fullWidth
                 value={saleForm.amount}
-                onChange={(event) => updateSaleForm('amount', event.target.value)}
+                onChange={(event) => updateSaleField('amount', event.target.value)}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -657,56 +735,72 @@ function ViewQuote() {
                 label="Forma de pago"
                 fullWidth
                 value={saleForm.payment_method}
-                onChange={(event) => updateSaleForm('payment_method', event.target.value)}
+                onChange={(event) => updateSaleField('payment_method', event.target.value)}
               >
-                <MenuItem value="Efectivo">Efectivo</MenuItem>
                 <MenuItem value="Transferencia">Transferencia</MenuItem>
+                <MenuItem value="Efectivo">Efectivo</MenuItem>
                 <MenuItem value="Tarjeta">Tarjeta</MenuItem>
                 <MenuItem value="Otro">Otro</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                label="Referencia bancaria"
+                fullWidth
+                value={saleForm.bank_reference}
+                onChange={(event) => updateSaleField('bank_reference', event.target.value)}
+                helperText="Para conciliar con el movimiento del banco"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="IVA (opcional)"
+                type="number"
+                fullWidth
+                value={saleForm.iva_amount}
+                onChange={(event) => updateSaleField('iva_amount', event.target.value)}
+                helperText={`Vacío = ${taxRate}% incluido en el importe`}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
                 label="Notas"
                 fullWidth
                 value={saleForm.notes}
-                onChange={(event) => updateSaleForm('notes', event.target.value)}
+                onChange={(event) => updateSaleField('notes', event.target.value)}
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeSaleDialog}>Cancelar</Button>
-          <Button variant="contained" onClick={handleMarkSold} disabled={savingSale}>
+          <Button onClick={() => setSaleDialogOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSaveSale} disabled={savingSale}>
             {savingSale ? 'Guardando...' : 'Guardar venta'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={closeDeleteDialog}
-      >
-        <DialogTitle>Delete Quote</DialogTitle>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Eliminar cotización</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the quote "{quote.title}"? This action cannot be undone.
+            ¿Eliminar la cotización "{quote.title}"? Se eliminarán también sus ventas, imágenes y documentos. Esta acción no se puede deshacer.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDeleteDialog}>Cancel</Button>
-          <Button 
-            onClick={handleDeleteQuote} 
-            color="error"
-            disabled={deleting}
-          >
-            {deleting ? <CircularProgress size={24} /> : 'Delete'}
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={handleDeleteQuote} color="error" disabled={deleting}>
+            {deleting ? <CircularProgress size={20} /> : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
+}
+
+function quotedIva(total, taxRate) {
+  if (!(taxRate > 0) || !(total > 0)) return 0;
+  return total - total / (1 + taxRate / 100);
 }
 
 export default ViewQuote;

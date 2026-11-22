@@ -8,6 +8,7 @@ const { renderPdf } = require('./renderer');
 const { getSettings } = require('./settings');
 const { ValidationError } = require('./errors');
 const { OUTPUT_FOLIO_PATTERN } = require('./folio');
+const { documentImages } = require('../images');
 
 const CONFIG_DIR = process.env.CONFIG_DIR || path.join(__dirname, '..', '..', 'config');
 const PDF_DIR = path.join(CONFIG_DIR, 'pdf');
@@ -45,6 +46,7 @@ function getStoredDocument(db, quoteId) {
 function saveDocument(db, quoteId, input) {
   const { document, totals } = normalizeDocument({
     ...input,
+    imagenes: documentImages(db, quoteId),
     source_quote_ids: input.source_quote_ids?.length ? input.source_quote_ids : [Number(quoteId)],
   });
   const settings = getSettings(db);
@@ -74,7 +76,7 @@ function saveDocument(db, quoteId, input) {
 function getDocument(db, quoteId) {
   const stored = getStoredDocument(db, quoteId);
   const input = stored || buildDocument(db, quoteId);
-  return normalizeDocument(input);
+  return normalizeDocument({ ...input, imagenes: documentImages(db, quoteId) });
 }
 
 function timestamp() {
@@ -104,7 +106,10 @@ async function exportQuotePdf(db, quoteId, inputDocument = null) {
   const settings = getSettings(db);
   const templateVersion = settings.pdf_template_version || 'imprematica-v1';
   const stored = inputDocument || getStoredDocument(db, quoteId) || buildDocument(db, quoteId);
-  const { document, totals } = normalizeDocument(stored);
+  const { document, totals } = normalizeDocument({
+    ...stored,
+    imagenes: documentImages(db, quoteId),
+  });
   const filename = `${document.folio_salida}.pdf`;
 
   if (!OUTPUT_FOLIO_PATTERN.test(document.folio_salida)) {

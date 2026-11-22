@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 6123;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '20mb' }));
 app.use(morgan('dev'));
 
 // Define paths for Docker compatibility
@@ -105,6 +105,8 @@ const createCountsRoutes = require('./routes/counts');
 const createPdfRoutes = require('./routes/pdf');
 const createSalesRoutes = require('./routes/sales');
 const createMergeRoutes = require('./routes/merge');
+const createImageRoutes = require('./routes/images');
+const createAnalyticsRoutes = require('./routes/analytics');
 
 // Initialize routes with the database instance
 const filamentRoutes = createFilamentRoutes(db);
@@ -118,6 +120,8 @@ const countsRoutes = createCountsRoutes(db);
 const pdfRoutes = createPdfRoutes(db);
 const salesRoutes = createSalesRoutes(db);
 const mergeRoutes = createMergeRoutes(db);
+const imageRoutes = createImageRoutes(db);
+const analyticsRoutes = createAnalyticsRoutes(db);
 
 // Use routes
 app.use('/api/filaments', filamentRoutes);
@@ -132,6 +136,8 @@ app.use('/api/counts', countsRoutes);
 app.use('/api', pdfRoutes);
 app.use('/api', salesRoutes);
 app.use('/api', mergeRoutes);
+app.use('/api', imageRoutes);
+app.use('/api', analyticsRoutes);
 
 // Serve static assets in production
 app.use(express.static(path.join(__dirname, 'client/build')));

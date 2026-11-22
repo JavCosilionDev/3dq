@@ -35,6 +35,35 @@ function requireNumber(value, field, { min = 0 } = {}) {
   return number;
 }
 
+function normalizeHex(value, field) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const hex = String(value).trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    throw new ValidationError(`El campo ${field} debe ser un color hexadecimal`, field, 'invalid_color');
+  }
+
+  return hex.toUpperCase();
+}
+
+function normalizeImage(image, index) {
+  if (!image || typeof image !== 'object') {
+    throw new ValidationError(`La imagen ${index} no es válida`, `imagenes[${index}]`, 'invalid_image');
+  }
+
+  return {
+    id: image.id ? Number(image.id) : null,
+    filename: String(image.filename || `imagen-${index + 1}`).slice(0, 200),
+    archivo: requireText(image.archivo, `imagenes[${index}].archivo`),
+    mime_type: requireText(image.mime_type, `imagenes[${index}].mime_type`),
+    sha256: String(image.sha256 || '').slice(0, 64),
+    alt: optionalText(image.alt, `imagenes[${index}].alt`),
+    primaria: Boolean(image.primaria),
+  };
+}
+
 function normalizeItem(item, index) {
   if (!item || typeof item !== 'object') {
     throw new ValidationError(`El ítem ${index} no es válido`, `items[${index}]`, 'invalid_item');
@@ -53,6 +82,9 @@ function normalizeItem(item, index) {
   if (tipo === 'filamento') {
     normalized.material = sanitizeMaterial(requireText(item.material, `items[${index}].material`));
     normalized.gramos = requireNumber(item.gramos, `items[${index}].gramos`, { min: 0.01 });
+    normalized.color = optionalText(item.color, `items[${index}].color`);
+    normalized.color_hex = normalizeHex(item.color_hex, `items[${index}].color_hex`);
+    normalized.purge_grams = requireNumber(item.purge_grams ?? 0, `items[${index}].purge_grams`);
   } else if (tipo === 'producto') {
     normalized.texto = requireText(item.texto, `items[${index}].texto`);
     normalized.precio = requireNumber(item.precio, `items[${index}].precio`);
@@ -101,12 +133,24 @@ function normalizeDocument(input) {
     },
     duracion_minutos: requireNumber(input.duracion_minutos ?? 0, 'duracion_minutos'),
     items: Array.isArray(input.items) ? input.items.map(normalizeItem) : [],
+    imagenes: Array.isArray(input.imagenes) ? input.imagenes.map(normalizeImage) : [],
     mostrar_precios_por_item: Boolean(input.mostrar_precios_por_item),
     notas: Array.isArray(input.notas)
       ? input.notas.map((note) => String(note).trim()).filter(Boolean)
       : [],
     source_quote_ids: Array.isArray(input.source_quote_ids) ? input.source_quote_ids : [],
   };
+
+  if (document.imagenes.length > 0) {
+    const primaryIndex = Math.max(
+      0,
+      document.imagenes.findIndex((image) => image.primaria)
+    );
+    document.imagenes = document.imagenes.map((image, index) => ({
+      ...image,
+      primaria: index === primaryIndex,
+    }));
+  }
 
   if (!isValidDate(document.fecha_emision)) {
     throw new ValidationError('La fecha de emisión no es válida', 'fecha_emision', 'invalid_date');

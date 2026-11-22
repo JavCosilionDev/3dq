@@ -25,7 +25,11 @@ function productDetail(db, quote) {
   }
 
   for (const filament of filaments) {
-    lines.push(`${resolveMaterial(db, filament)}: ${Number(filament.grams_used).toFixed(2)}g`);
+    const color = filament.color_name ? ` · ${filament.color_name}` : '';
+    const purge = Number(filament.purge_grams) > 0
+      ? ` (purga ${Number(filament.purge_grams).toFixed(2)}g)`
+      : '';
+    lines.push(`${resolveMaterial(db, filament)}${color}: ${Number(filament.grams_used).toFixed(2)}g${purge}`);
   }
 
   for (const item of hardware) {

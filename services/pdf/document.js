@@ -3,6 +3,7 @@ const { deriveOutputFolio } = require('./folio');
 const { sanitizeMaterial } = require('./labels');
 const { roundHalfUp } = require('./money');
 const { ValidationError } = require('./errors');
+const { documentImages } = require('../images');
 
 function resolveMaterial(db, filament) {
   if (filament.material) {
@@ -49,6 +50,9 @@ function buildDocument(db, quoteId) {
     tipo: 'filamento',
     material: resolveMaterial(db, filament),
     gramos: Number(filament.grams_used) || 0,
+    color: filament.color_name || null,
+    color_hex: filament.color_hex || null,
+    purge_grams: Number(filament.purge_grams) || 0,
     visible: true,
   }));
 
@@ -100,6 +104,7 @@ function buildDocument(db, quoteId) {
     items,
     mostrar_precios_por_item: false,
     notas: [],
+    imagenes: documentImages(db, quoteId),
     source_quote_ids: [quote.id],
   };
 }

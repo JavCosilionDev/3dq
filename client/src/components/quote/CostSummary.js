@@ -5,8 +5,8 @@ import {
   Typography,
   Paper,
   InputAdornment,
-  Divider,
-  Box
+  Box,
+  Button
 } from '@mui/material';
 import SettingsContext from '../../context/SettingsContext';
 
@@ -20,7 +20,10 @@ function CostSummary({
   setTotalCost,
   currencySymbol,
   discount = 0,
-  quantity = 1
+  quantity = 1,
+  manualTotal = false,
+  setManualTotal,
+  onUseCalculated
 }) {
   const { settings } = useContext(SettingsContext);
   const tax_rate = parseFloat(settings.tax_rate) || 0;
@@ -51,10 +54,12 @@ function CostSummary({
   const taxAmount = tax_rate > 0 ? afterDiscount * (tax_rate / 100) : 0;
   const calculatedTotal = afterDiscount + taxAmount;
 
-  // Update total cost when any component changes
+  // Update total cost when any component changes, except when a manual total is preserved.
   useEffect(() => {
-    setTotalCost(calculatedTotal);
-  }, [calculatedTotal]);
+    if (!manualTotal) {
+      setTotalCost(calculatedTotal);
+    }
+  }, [calculatedTotal, manualTotal, setTotalCost]);
   
 
 
@@ -236,15 +241,52 @@ function CostSummary({
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
+          gap: 2,
+          flexWrap: 'wrap',
           mt: 2, 
           pt: 2,
           borderTop: 1, 
           borderColor: 'divider'
         }}>
-          <Typography variant="h6" fontWeight="bold">Final Total:</Typography>
-          <Typography variant="h6" fontWeight="bold" color="primary">
-            {currencySymbol}{totalCost.toFixed(2)}
-          </Typography>
+          <Box>
+            <Typography variant="h6" fontWeight="bold">Total final:</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {manualTotal
+                ? 'Total manual: se conserva el precio negociado o combinado.'
+                : 'Calculado con costos, margen, descuento e IVA.'}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {manualTotal ? (
+              <TextField
+                label="Total"
+                type="number"
+                size="small"
+                value={totalCost}
+                onChange={(event) => setTotalCost(parseFloat(event.target.value) || 0)}
+                InputProps={{ startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment> }}
+                sx={{ width: 160 }}
+              />
+            ) : (
+              <Typography variant="h6" fontWeight="bold" color="primary">
+                {currencySymbol}{Number(totalCost || 0).toFixed(2)}
+              </Typography>
+            )}
+            <Button
+              size="small"
+              variant={manualTotal ? 'outlined' : 'text'}
+              onClick={() => {
+                if (manualTotal) {
+                  if (onUseCalculated) onUseCalculated();
+                  setTotalCost(calculatedTotal);
+                } else if (setManualTotal) {
+                  setManualTotal(true);
+                }
+              }}
+            >
+              {manualTotal ? 'Usar cálculo' : 'Fijar total'}
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Paper>

@@ -25,7 +25,8 @@ import {
   Settings as SettingsIcon,
   FlashOn as FlashOnIcon,
   Home as HomeIcon,
-  PointOfSale as PointOfSaleIcon
+  PointOfSale as PointOfSaleIcon,
+  Insights as InsightsIcon
 } from '@mui/icons-material';
 import SettingsContext from '../../context/SettingsContext';
 import SidebarContext from '../../context/SidebarContext';
@@ -62,6 +63,11 @@ function Sidebar() {
       text: 'Ventas',
       icon: <PointOfSaleIcon />,
       path: '/sales'
+    },
+    {
+      text: 'Análisis',
+      icon: <InsightsIcon />,
+      path: '/analytics'
     },
     {
       text: 'Filaments',

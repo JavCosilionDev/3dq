@@ -30,6 +30,7 @@ function QuoteBuilder() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { settings } = useContext(SettingsContext);
+  const taxRate = parseFloat(settings.tax_rate) || 0;
   
   // Check if we're editing an existing quote
   const isEditMode = !!id;
@@ -81,6 +82,7 @@ function QuoteBuilder() {
   
   // Markup is now handled in formData
   const [totalCost, setTotalCost] = useState(0);
+  const [manualTotal, setManualTotal] = useState(false);
 
   // Fetch data from API
   useEffect(() => {
@@ -178,8 +180,12 @@ function QuoteBuilder() {
             id: f.id,
             filament_id: f.filament_id,
             filament_name: f.filament_name,
+            material: f.material || f.filament_name,
             filament_price_per_gram: f.filament_price_per_gram,
+            color_name: f.color_name || '',
+            color_hex: f.color_hex || '#95BCFC',
             grams_used: f.grams_used,
+            purge_grams: f.purge_grams || 0,
             total_cost: f.total_cost
           })));
           
@@ -221,8 +227,28 @@ function QuoteBuilder() {
           });
         }
         
-        // Set markup
-        setTotalCost(data.total_cost);
+        // Keep the saved total when it does not match the calculated breakdown.
+        // Merged or negotiated quotes must not be re-priced just by opening the editor.
+        const filamentTotal = (data.filaments || []).reduce((sum, item) => sum + Number(item.total_cost || 0), 0);
+        const hardwareTotal = (data.hardware || []).reduce((sum, item) => sum + Number(item.total_cost || 0), 0);
+        const printTotal = data.print_setup
+          ? Number(data.print_setup.power_cost || 0) + Number(data.print_setup.depreciation_cost || 0)
+          : 0;
+        const labourTotal = Number(data.labour?.total_cost || 0);
+        const baseSubtotal = (filamentTotal + hardwareTotal + printTotal + labourTotal) * (Number(data.quantity) || 1);
+        const afterMarkup = baseSubtotal * (1 + (Number(data.markup_percent) || 0) / 100);
+        const afterDiscount = afterMarkup * (1 - (Number(data.discount_percent) || 0) / 100);
+        const calculatedTotal = afterDiscount * (1 + taxRate / 100);
+        const hasBreakdown = Boolean(
+          (data.filaments && data.filaments.length)
+          || (data.hardware && data.hardware.length)
+          || data.print_setup
+          || data.labour
+        );
+        const savedTotal = Number(data.total_cost) || 0;
+
+        setTotalCost(savedTotal);
+        setManualTotal(!hasBreakdown || Math.abs(calculatedTotal - savedTotal) > 0.01);
         
         setLoading(false);
       } catch (error) {
@@ -233,7 +259,7 @@ function QuoteBuilder() {
     };
     
     loadQuoteData();
-  }, [id, isEditMode]);
+  }, [id, isEditMode, taxRate]);
 
   // Handle input changes for the form
   const handleInputChange = (e) => {
@@ -245,11 +271,13 @@ function QuoteBuilder() {
     
     // Update markup state when it changes in formData
     if (name === 'markup') {
-      setTotalCost(calculateTotalCost(formData.markup, formData.discount));
+      setManualTotal(false);
+      setTotalCost(calculateTotalCost(value, formData.discount));
     }
     
     // Update total when discount changes
     if (name === 'discount') {
+      setManualTotal(false);
       setTotalCost(calculateTotalCost(formData.markup, value));
     }
   };
@@ -301,11 +329,11 @@ function QuoteBuilder() {
       case 0: // Job Info
         return formData.customer_name && formData.date && formData.title;
       case 1: // Filament
-        return quoteFilaments.length > 0 && quoteFilaments.every(f => f.grams_used > 0);
+        return isEditMode || (quoteFilaments.length > 0 && quoteFilaments.every(f => f.grams_used > 0));
       case 2: // Hardware
         return true; // Hardware is optional
       case 3: // Print Setup
-        return printSetup.printer_id && printSetup.print_time > 0;
+        return isEditMode || (printSetup.printer_id && printSetup.print_time > 0);
       case 4: // Labour
         return true; // Labour fields have defaults
       case 5: // Summary
@@ -337,9 +365,13 @@ function QuoteBuilder() {
         filaments: quoteFilaments.map(f => ({
           filament_id: parseInt(f.filament_id),
           filament_name: f.filament_name,
-          filament_price_per_gram: f.filament_price_per_gram,
-          grams_used: f.grams_used,
-          total_cost: f.total_cost
+          material: f.material || f.filament_name,
+          filament_price_per_gram: Number(f.filament_price_per_gram) || 0,
+          color_name: f.color_name || null,
+          color_hex: f.color_hex || null,
+          grams_used: Number(f.grams_used) || 0,
+          purge_grams: Number(f.purge_grams) || 0,
+          total_cost: Number(f.total_cost) || 0
         })),
         
         // Hardware data
@@ -352,23 +384,32 @@ function QuoteBuilder() {
         })),
         
         // Print setup data
-        print_setup: {
-          printer_id: parseInt(printSetup.printer_id),
-          printer_name: printSetup.printer_name,
-          print_time: printSetup.print_time,
-          power_cost: printSetup.power_cost,
-          depreciation_cost: printSetup.depreciation_cost
-        },
+        print_setup: printSetup.printer_id && Number(printSetup.print_time) > 0
+          ? {
+              printer_id: parseInt(printSetup.printer_id),
+              printer_name: printSetup.printer_name,
+              print_time: printSetup.print_time,
+              power_cost: printSetup.power_cost,
+              depreciation_cost: printSetup.depreciation_cost
+            }
+          : null,
         
         // Labour data
-        labour: {
-          design_minutes: parseInt(labour.design_minutes),
-          preparation_minutes: parseInt(labour.preparation_minutes),
-          post_processing_minutes: parseInt(labour.post_processing_minutes),
-          other_minutes: parseInt(labour.other_minutes),
-          labour_rate_per_hour: parseFloat(labour.labour_rate_per_hour),
-          total_cost: labour.total_cost
-        }
+        labour: (
+          Number(labour.design_minutes) > 0
+          || Number(labour.preparation_minutes) > 0
+          || Number(labour.post_processing_minutes) > 0
+          || Number(labour.other_minutes) > 0
+        )
+          ? {
+              design_minutes: parseInt(labour.design_minutes) || 0,
+              preparation_minutes: parseInt(labour.preparation_minutes) || 0,
+              post_processing_minutes: parseInt(labour.post_processing_minutes) || 0,
+              other_minutes: parseInt(labour.other_minutes) || 0,
+              labour_rate_per_hour: parseFloat(labour.labour_rate_per_hour) || 0,
+              total_cost: labour.total_cost
+            }
+          : null
       };
 
       // Set title for new quotes if not provided
@@ -428,6 +469,7 @@ function QuoteBuilder() {
             quoteFilaments={quoteFilaments} 
             setQuoteFilaments={setQuoteFilaments}
             currencySymbol={settings.currency_symbol}
+            isEditMode={isEditMode}
           />
         );
       case 2:
@@ -468,6 +510,9 @@ function QuoteBuilder() {
             quantity={parseInt(formData.quantity) || 1}
             totalCost={totalCost}
             setTotalCost={setTotalCost}
+            manualTotal={manualTotal}
+            setManualTotal={setManualTotal}
+            onUseCalculated={() => setManualTotal(false)}
             currencySymbol={settings.currency_symbol || '$'}
           />
         );

@@ -21,6 +21,7 @@ import QuickCost from './pages/QuickCost';
 import ViewQuote from './pages/ViewQuote';
 import QuoteDocumentPage from './pages/QuoteDocumentPage';
 import SalesPage from './pages/SalesPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import MergeQuotesPage from './pages/MergeQuotesPage';
 
 // Context
@@ -111,6 +112,7 @@ function App() {
                   <Route path="/quotes" element={<Dashboard />} />
                   <Route path="/quotes/merge" element={<MergeQuotesPage />} />
                   <Route path="/sales" element={<SalesPage />} />
+                  <Route path="/analytics" element={<AnalyticsPage />} />
                   <Route path="/filaments" element={<FilamentPage />} />
                   <Route path="/printers" element={<PrinterPage />} />
                   <Route path="/hardware" element={<HardwarePage />} />

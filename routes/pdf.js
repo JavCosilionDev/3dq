@@ -6,6 +6,11 @@ const {
   listExports,
   resolveExportFile,
 } = require('../services/pdf/exporter');
+const {
+  exportQuotePng,
+  listImageExports,
+  resolveImageExportFile,
+} = require('../services/pdf/image-exporter');
 
 function sendError(res, error) {
   if (error.name === 'ValidationError') {
@@ -60,6 +65,41 @@ module.exports = (db) => {
   router.get('/quotes/:id/exports', (req, res) => {
     try {
       res.json(listExports(db, req.params.id));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  router.post('/quotes/:id/png', async (req, res) => {
+    try {
+      const input = req.body.document || null;
+      const result = await exportQuotePng(db, req.params.id, input);
+      res.status(result.reused ? 200 : 201).json({
+        filename: result.filename,
+        folio: result.folio,
+        reused: result.reused,
+        url: `/api/image-exports/${encodeURIComponent(result.filename)}`,
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  router.get('/quotes/:id/image-exports', (req, res) => {
+    try {
+      res.json(listImageExports(db, req.params.id));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  router.get('/image-exports/:filename', (req, res) => {
+    try {
+      const filePath = resolveImageExportFile(req.params.filename);
+      const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', `${disposition}; filename="${req.params.filename}"`);
+      res.sendFile(filePath);
     } catch (error) {
       sendError(res, error);
     }

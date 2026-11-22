@@ -21,6 +21,19 @@ function findBrowser() {
   return browserPath;
 }
 
+async function waitForAssets(page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(Array.from(document.images).map((image) => {
+      if (image.complete) return Promise.resolve();
+      return new Promise((resolve) => {
+        image.onload = resolve;
+        image.onerror = resolve;
+      });
+    }));
+  });
+}
+
 async function renderPdf(html) {
   const browser = await puppeteer.launch({
     executablePath: findBrowser(),
@@ -35,7 +48,7 @@ async function renderPdf(html) {
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load' });
-    await page.evaluate(() => document.fonts.ready.then(() => true));
+    await waitForAssets(page);
 
     const overflow = await page.evaluate(() => {
       return Array.from(document.querySelectorAll('[data-fit]'))
@@ -70,4 +83,38 @@ async function renderPdf(html) {
   }
 }
 
-module.exports = { renderPdf, findBrowser };
+async function renderPng(html, selector = '.card') {
+  const browser = await puppeteer.launch({
+    executablePath: findBrowser(),
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--force-device-scale-factor=2',
+    ],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 900, height: 1200, deviceScaleFactor: 2 });
+    await page.setContent(html, { waitUntil: 'load' });
+    await waitForAssets(page);
+
+    const element = await page.$(selector);
+    if (!element) {
+      throw new ValidationError('No se encontró el lienzo de la imagen', 'layout', 'image_canvas');
+    }
+
+    const png = await element.screenshot({
+      type: 'png',
+      omitBackground: false,
+    });
+
+    return Buffer.from(png);
+  } finally {
+    await browser.close();
+  }
+}
+
+module.exports = { renderPdf, renderPng, findBrowser };
