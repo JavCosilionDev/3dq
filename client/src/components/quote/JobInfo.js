@@ -44,7 +44,7 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
       fetchNextQuoteNumber();
     }
   }, [isEditMode, handleInputChange, formData.quote_number]);
-  
+
   // Initialize markup from settings only for new quotes
   useEffect(() => {
     if (!isEditMode && settings?.default_markup_percent && !formData.markup) {
@@ -55,7 +55,7 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
         }
       });
     }
-    
+
     // Initialize quantity to 1 if not set
     if (!formData.quantity) {
       handleInputChange({
@@ -66,122 +66,121 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
       });
     }
   }, [isEditMode, settings, formData.markup, formData.quantity, handleInputChange]);
+
   return (
-    <Paper sx={{ p: 3, mb: 3, backgroundColor: 'background.paper' }}>
-      <Typography variant="h6" gutterBottom>
-        Job Information
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2, borderRadius: 2 }}>
+      <Typography variant="h6">Datos del trabajo</Typography>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+        Cliente, modelo y condiciones comerciales.
       </Typography>
+
       {loading ? (
         <CircularProgress sx={{ my: 4, mx: 'auto', display: 'block' }} />
       ) : (
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+        <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               name="quote_number"
-              label="Quote Number"
+              label="Folio"
               value={formData.quote_number || nextQuoteNumber}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               required
-              disabled={isEditMode} // Can't change quote number in edit mode
+              disabled={isEditMode}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               name="customer_name"
-              label="Customer Name"
+              label="Cliente"
               value={formData.customer_name}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               required
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               name="title"
-              label="Model Name"
+              label="Modelo"
               value={formData.title}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               required
-              placeholder="Name of the 3D model"
+              placeholder="Nombre del modelo 3D"
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               name="date"
-              label="Date"
+              label="Fecha"
               type="date"
               value={formData.date}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               required
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12}>
-            <TextField
-              name="notes"
-              label="Notes (optional)"
-              value={formData.notes}
-              onChange={handleInputChange}
-              fullWidth
-              multiline
-              rows={3}
-            />
-          </Grid>
-          
-          {/* Pricing Section */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'medium' }}>
-              Pricing Options
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6}>
+
+          <Grid item xs={6} sm={4} md={3}>
             <TextField
               name="markup"
-              label="Markup Percentage"
+              label="Margen"
               type="number"
               value={formData.markup ?? 0}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               InputProps={{
                 endAdornment: <InputAdornment position="end">%</InputAdornment>,
                 inputProps: { min: 0 }
               }}
             />
           </Grid>
-          
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={6} sm={4} md={3}>
             <TextField
               name="discount"
-              label="Discount Percentage"
+              label="Descuento"
               type="number"
               value={formData.discount || 0}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               InputProps={{
                 endAdornment: <InputAdornment position="end">%</InputAdornment>,
                 inputProps: { min: 0, max: 100 }
               }}
             />
           </Grid>
-          
-          <Grid item xs={12} sm={6}>
+          <Grid item xs={6} sm={4} md={3}>
             <TextField
               name="quantity"
-              label="Quantity"
+              label="Cantidad"
               type="number"
               value={formData.quantity || 1}
               onChange={handleInputChange}
               fullWidth
+              size="small"
               required
-              InputProps={{
-                inputProps: { min: 1 }
-              }}
+              InputProps={{ inputProps: { min: 1 } }}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              name="notes"
+              label="Notas (opcional)"
+              value={formData.notes}
+              onChange={handleInputChange}
+              fullWidth
+              size="small"
+              multiline
+              minRows={2}
+              maxRows={4}
             />
           </Grid>
         </Grid>

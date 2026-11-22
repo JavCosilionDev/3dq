@@ -38,7 +38,7 @@ function QuoteBuilder() {
   // Step state
   const [activeStep, setActiveStep] = useState(0);
   const [maxStepReached, setMaxStepReached] = useState(0);
-  const steps = ['Job Info', 'Filament', 'Hardware', 'Print Setup', 'Labour', 'Summary'];
+  const steps = ['Datos', 'Filamento', 'Hardware', 'Impresión', 'Mano de obra', 'Resumen'];
   
   // Data states
   const [filaments, setFilaments] = useState([]);
@@ -270,9 +270,16 @@ function QuoteBuilder() {
     loadQuoteData();
   }, [id, isEditMode, taxRate]);
 
+  // Keep the first field of each step visible after navigating.
+  useEffect(() => {
+    const main = document.querySelector('main');
+    if (main) {
+      main.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeStep]);
+
   // Handle input changes for the form
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const handleInputChange = (e) => {    const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value
@@ -532,20 +539,37 @@ function QuoteBuilder() {
 
   return (
     <Box>
-      <Typography variant="h4" component="h1" sx={{ mb: 4 }}>
-        {isEditMode ? 'Edit Quote' : 'New Quote'}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap', mb: { xs: 2, md: 2.5 } }}>
+        <Box>
+          <Typography variant="h4" component="h1">
+            {isEditMode ? 'Editar cotización' : 'Nueva cotización'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {steps[activeStep]} · Paso {activeStep + 1} de {steps.length}
+          </Typography>
+        </Box>
+        {formData.quote_number && (
+          <Typography variant="body2" color="text.secondary">
+            {formData.quote_number}
+          </Typography>
+        )}
+      </Box>
 
-      <Box sx={{ overflowX: 'auto', pb: 1 }}>
-        <Stepper 
-          activeStep={activeStep} 
+      <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
+        <Stepper
+          activeStep={activeStep}
           nonLinear
-          sx={{ 
-            mb: 4,
-            minWidth: { xs: 600, md: '100%' }, // Force minimum width on mobile
+          sx={{
+            mb: { xs: 2, md: 2.5 },
+            '& .MuiStepLabel-label': {
+              fontSize: { xs: 12, md: 13 },
+              mt: 0.5
+            },
+            '& .MuiStepIcon-root': {
+              fontSize: 22
+            },
             '& .MuiStepLabel-root': {
               ...(isEditMode && {
-                // In edit mode, make ALL steps look accessible with primary.light color
                 '& .MuiStepIcon-root': {
                   '&:not(.Mui-active):not(.Mui-completed)': {
                     color: 'primary.light'
@@ -553,10 +577,8 @@ function QuoteBuilder() {
                 }
               }),
               ...(!isEditMode && {
-                // In new quote mode, only color steps we've reached
                 '& .MuiStepIcon-root': {
                   '&:not(.Mui-active):not(.Mui-completed)': {
-                    // Apply conditional styling based on index
                     '&.MuiStepIcon-root[data-reached="true"]': {
                       color: 'primary.light'
                     }
@@ -610,43 +632,51 @@ function QuoteBuilder() {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
       {getStepContent(activeStep)}
 
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        justifyContent: { xs: 'stretch', sm: 'space-between' },
-        gap: 2,
-        mt: 2 
-      }}>
+      <Paper
+        elevation={8}
+        sx={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          mt: 2,
+          p: { xs: 1.25, sm: 1.5 },
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
         <Button
           variant="outlined"
           onClick={handleBack}
           startIcon={<BackIcon />}
           disabled={activeStep === 0}
-          sx={{ order: { xs: 2, sm: 1 } }}
-          fullWidth={false}
         >
-          Back
+          Atrás
         </Button>
-        <Box sx={{ 
-          order: { xs: 1, sm: 2 },
-          alignSelf: { xs: 'stretch', sm: 'auto' }
-        }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            Paso {activeStep + 1} de {steps.length}
+          </Typography>
           {activeStep === steps.length - 1 ? (
             <Button
               variant="contained"
               onClick={saveQuote}
               startIcon={<SaveIcon />}
               disabled={saving || !validateStep()}
-              fullWidth
             >
-              {saving ? <CircularProgress size={24} /> : 'Save Quote'}
+              {saving ? <CircularProgress size={22} color="inherit" /> : 'Guardar cotización'}
             </Button>
           ) : (
             <Button
@@ -654,13 +684,12 @@ function QuoteBuilder() {
               onClick={handleNext}
               endIcon={<NextIcon />}
               disabled={!validateStep()}
-              fullWidth
             >
-              Next
+              Siguiente
             </Button>
           )}
         </Box>
-      </Box>
+      </Paper>
     </Box>
   );
 }

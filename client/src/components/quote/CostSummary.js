@@ -10,7 +10,37 @@ import {
 } from '@mui/material';
 import SettingsContext from '../../context/SettingsContext';
 
-function CostSummary({ 
+function SummaryRow({ label, value, strong = false, color }) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, py: 0.6 }}>
+      <Typography variant="body2" color={color || 'text.secondary'}>{label}</Typography>
+      <Typography variant="body2" fontWeight={strong ? 700 : 500} color={color}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+function SummaryCard({ title, children }) {
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        p: 2
+      }}
+    >
+      <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1 }}>
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+function CostSummary({
   quoteFilaments,
   quoteHardware,
   printSetup,
@@ -27,26 +57,18 @@ function CostSummary({
 }) {
   const { settings } = useContext(SettingsContext);
   const tax_rate = parseFloat(settings.tax_rate) || 0;
-  
-  // We no longer need to initialize markup here as it's handled in JobInfo component
 
-  // Calculate totals
-  const filamentTotal = quoteFilaments.reduce((sum, f) => sum + f.total_cost, 0);
-  const hardwareTotal = quoteHardware.reduce((sum, h) => sum + h.total_cost, 0);
-  const powerCost = printSetup.power_cost || 0;
-  const depreciationCost = printSetup.depreciation_cost || 0;
-  const labourCost = labour.total_cost || 0;
-  
+  const filamentTotal = quoteFilaments.reduce((sum, f) => sum + Number(f.total_cost || 0), 0);
+  const hardwareTotal = quoteHardware.reduce((sum, h) => sum + Number(h.total_cost || 0), 0);
+  const powerCost = Number(printSetup.power_cost || 0);
+  const depreciationCost = Number(printSetup.depreciation_cost || 0);
+  const labourCost = Number(labour.total_cost || 0);
+
   const materialCostsTotal = filamentTotal + hardwareTotal + powerCost + depreciationCost;
   const serviceCostsTotal = labourCost;
-  
-  // Calculate per-unit subtotal
   const perUnitSubtotal = materialCostsTotal + serviceCostsTotal;
-  
-  // Apply quantity to get total subtotal
   const subtotal = perUnitSubtotal * quantity;
-  
-  // Apply markup, discount, and tax to the total subtotal
+
   const markupAmount = subtotal * (markup / 100);
   const afterMarkup = subtotal + markupAmount;
   const discountAmount = afterMarkup * (discount / 100);
@@ -60,233 +82,123 @@ function CostSummary({
       setTotalCost(calculatedTotal);
     }
   }, [calculatedTotal, manualTotal, setTotalCost]);
-  
 
+  const money = (value) => `${currencySymbol}${Number(value || 0).toFixed(2)}`;
 
   return (
-    <Paper sx={{ p: 3, mb: 3, backgroundColor: 'background.paper' }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-        Cost Summary
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2, borderRadius: 2 }}>
+      <Typography variant="h6">Resumen de costos</Typography>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+        Costos, margen, descuento e IVA de la cotización.
       </Typography>
-      
-      {/* Main Content - Side by Side Layout */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {/* Left Side - Material Costs */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" color="primary" gutterBottom sx={{ borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-            Material Costs
-          </Typography>
-          
-          <Grid container spacing={2}>
-            {/* Filament */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Filament:</Typography>
-                <Typography variant="body2">{currencySymbol}{filamentTotal.toFixed(2)}</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Hardware */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Hardware:</Typography>
-                <Typography variant="body2">{currencySymbol}{hardwareTotal.toFixed(2)}</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Power */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Power:</Typography>
-                <Typography variant="body2">{currencySymbol}{powerCost.toFixed(2)}</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Depreciation */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Depreciation:</Typography>
-                <Typography variant="body2">{currencySymbol}{depreciationCost.toFixed(2)}</Typography>
-              </Box>
-            </Grid>
-          </Grid>
-          
-          {/* Material Subtotal */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: 1, borderColor: 'divider', pt: 1, mt: 2 }}>
-            <Typography variant="subtitle2" fontWeight="medium">Material Subtotal:</Typography>
-            <Typography variant="subtitle2" fontWeight="medium">{currencySymbol}{materialCostsTotal.toFixed(2)}</Typography>
-          </Box>
-        </Grid>
-        
-        {/* Right Side - Labour Costs */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" color="primary" gutterBottom sx={{ borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-            Labour Costs
-          </Typography>
-          
-          <Grid container spacing={2}>
-            {/* Design */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Design:</Typography>
-                <Typography variant="body2">{labour.design_minutes}m</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Preparation */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Preparation:</Typography>
-                <Typography variant="body2">{labour.preparation_minutes}m</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Post Processing */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Post Processing:</Typography>
-                <Typography variant="body2">{labour.post_processing_minutes}m</Typography>
-              </Box>
-            </Grid>
-            
-            {/* Other */}
-            <Grid item xs={6}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Other:</Typography>
-                <Typography variant="body2">{labour.other_minutes}m</Typography>
-              </Box>
-            </Grid>
-            
 
-          </Grid>
-          
-          {/* Labour Subtotal */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', borderTop: 1, borderColor: 'divider', pt: 1, mt: 2 }}>
-            <Typography variant="subtitle2" fontWeight="medium">Labour Subtotal:</Typography>
-            <Typography variant="subtitle2" fontWeight="medium">{currencySymbol}{serviceCostsTotal.toFixed(2)}</Typography>
-          </Box>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={4}>
+          <SummaryCard title="Materiales">
+            <SummaryRow label="Filamento" value={money(filamentTotal)} />
+            <SummaryRow label="Hardware" value={money(hardwareTotal)} />
+            <SummaryRow label="Energía" value={money(powerCost)} />
+            <SummaryRow label="Depreciación" value={money(depreciationCost)} />
+            <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 0.5, pt: 0.5 }}>
+              <SummaryRow label="Subtotal materiales" value={money(materialCostsTotal)} strong />
+            </Box>
+          </SummaryCard>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <SummaryCard title="Mano de obra">
+            <SummaryRow label="Diseño" value={`${labour.design_minutes || 0} min`} />
+            <SummaryRow label="Preparación" value={`${labour.preparation_minutes || 0} min`} />
+            <SummaryRow label="Postprocesado" value={`${labour.post_processing_minutes || 0} min`} />
+            <SummaryRow label="Otros" value={`${labour.other_minutes || 0} min`} />
+            <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 0.5, pt: 0.5 }}>
+              <SummaryRow label="Subtotal mano de obra" value={money(serviceCostsTotal)} strong />
+            </Box>
+          </SummaryCard>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <SummaryCard title="Desglose de precio">
+            {quantity > 1 && (
+              <>
+                <SummaryRow label="Subtotal por pieza" value={money(perUnitSubtotal)} />
+                <SummaryRow label="Cantidad" value={`× ${quantity}`} />
+              </>
+            )}
+            <SummaryRow
+              label={quantity > 1 ? 'Subtotal total' : 'Subtotal'}
+              value={money(subtotal)}
+              strong
+            />
+            <SummaryRow label={`Margen (${markup}%)`} value={`+${money(markupAmount)}`} />
+            <Box sx={{ borderTop: 1, borderColor: 'divider', my: 0.5 }} />
+            <SummaryRow label="Después del margen" value={money(afterMarkup)} strong />
+            {discount > 0 && (
+              <>
+                <SummaryRow label={`Descuento (${discount}%)`} value={`-${money(discountAmount)}`} color="error.main" />
+                <SummaryRow label="Después del descuento" value={money(afterDiscount)} strong />
+              </>
+            )}
+            {tax_rate > 0 && (
+              <SummaryRow label={`IVA (${tax_rate}%)`} value={`+${money(taxAmount)}`} />
+            )}
+          </SummaryCard>
         </Grid>
       </Grid>
-      
-      {/* Totals Section */}
-      <Box sx={{ backgroundColor: 'background.default', p: 3, borderRadius: 1, mt: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-          Price Breakdown
-        </Typography>
-        
-        {/* Per Unit Subtotal - only show if quantity > 1 */}
-        {quantity > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="subtitle1">Per Unit Subtotal:</Typography>
-            <Typography variant="subtitle1">{currencySymbol}{perUnitSubtotal.toFixed(2)}</Typography>
-          </Box>
-        )}
-        
-        {/* Quantity - only show if quantity > 1 */}
-        {quantity > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="subtitle1">Quantity:</Typography>
-            <Typography variant="subtitle1">× {quantity}</Typography>
-          </Box>
-        )}
-        
-        {/* Base Subtotal */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="subtitle1">{quantity > 1 ? 'Total Subtotal:' : 'Base Subtotal:'}</Typography>
-          <Typography variant="subtitle1">{currencySymbol}{subtotal.toFixed(2)}</Typography>
-        </Box>
-        
-        {/* Markup */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="subtitle1">Markup ({markup}%):</Typography>
-          <Typography variant="subtitle1">+{currencySymbol}{markupAmount.toFixed(2)}</Typography>
-        </Box>
-        
-        {/* After Markup */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, pt: 1, borderTop: '1px dashed rgba(0, 0, 0, 0.12)' }}>
-          <Typography variant="subtitle1" fontWeight="medium">After Markup:</Typography>
-          <Typography variant="subtitle1" fontWeight="medium">{currencySymbol}{afterMarkup.toFixed(2)}</Typography>
-        </Box>
-        
-        {/* Discount - only show if there is a discount */}
-        {discount > 0 && (
-          <>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="subtitle1">Discount ({discount}%):</Typography>
-              <Typography variant="subtitle1" color="error">-{currencySymbol}{discountAmount.toFixed(2)}</Typography>
-            </Box>
-          </>
-        )}
-        
-        {/* After Discount - only show if there is a discount */}
-        {discount > 0 && (
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, pt: 1, borderTop: '1px dashed rgba(0, 0, 0, 0.12)' }}>
-            <Typography variant="subtitle1" fontWeight="medium">After Discount:</Typography>
-            <Typography variant="subtitle1" fontWeight="medium">{currencySymbol}{afterDiscount.toFixed(2)}</Typography>
-          </Box>
-        )}
-        
-        {/* Tax - only show if tax rate is greater than 0 */}
-        {tax_rate > 0 && (
-          <>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="subtitle1">Tax ({tax_rate}%):</Typography>
-              <Typography variant="subtitle1">+{currencySymbol}{taxAmount.toFixed(2)}</Typography>
-            </Box>
-          </>
-        )}
-        
-        {/* Final Total */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
+
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           gap: 2,
           flexWrap: 'wrap',
-          mt: 2, 
-          pt: 2,
-          borderTop: 1, 
-          borderColor: 'divider'
-        }}>
-          <Box>
-            <Typography variant="h6" fontWeight="bold">Total final:</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {manualTotal
-                ? 'Total manual: se conserva el precio negociado o combinado.'
-                : 'Calculado con costos, margen, descuento e IVA.'}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            {manualTotal ? (
-              <TextField
-                label="Total"
-                type="number"
-                size="small"
-                value={totalCost}
-                onChange={(event) => setTotalCost(parseFloat(event.target.value) || 0)}
-                InputProps={{ startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment> }}
-                sx={{ width: 160 }}
-              />
-            ) : (
-              <Typography variant="h6" fontWeight="bold" color="primary">
-                {currencySymbol}{Number(totalCost || 0).toFixed(2)}
-              </Typography>
-            )}
-            <Button
+          mt: 2,
+          p: 2,
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'background.default'
+        }}
+      >
+        <Box>
+          <Typography variant="subtitle2" color="text.secondary">Total final</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {manualTotal
+              ? 'Total manual: se conserva el precio negociado o combinado.'
+              : 'Calculado con costos, margen, descuento e IVA.'}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          {manualTotal ? (
+            <TextField
+              label="Total"
+              type="number"
               size="small"
-              variant={manualTotal ? 'outlined' : 'text'}
-              onClick={() => {
-                if (manualTotal) {
-                  if (onUseCalculated) onUseCalculated();
-                  setTotalCost(calculatedTotal);
-                } else if (setManualTotal) {
-                  setManualTotal(true);
-                }
-              }}
-            >
-              {manualTotal ? 'Usar cálculo' : 'Fijar total'}
-            </Button>
-          </Box>
+              value={totalCost}
+              onChange={(event) => setTotalCost(parseFloat(event.target.value) || 0)}
+              InputProps={{ startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment> }}
+              sx={{ width: 160 }}
+            />
+          ) : (
+            <Typography variant="h5" fontWeight="bold" color="primary">
+              {money(totalCost)}
+            </Typography>
+          )}
+          <Button
+            size="small"
+            variant={manualTotal ? 'outlined' : 'text'}
+            onClick={() => {
+              if (manualTotal) {
+                if (onUseCalculated) onUseCalculated();
+                setTotalCost(calculatedTotal);
+              } else if (setManualTotal) {
+                setManualTotal(true);
+              }
+            }}
+          >
+            {manualTotal ? 'Usar cálculo' : 'Fijar total'}
+          </Button>
         </Box>
       </Box>
     </Paper>

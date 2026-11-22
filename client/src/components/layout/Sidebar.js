@@ -11,7 +11,6 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Typography,
 
   useTheme,
   useMediaQuery
@@ -33,29 +32,28 @@ import SidebarContext from '../../context/SidebarContext';
 
 // Sidebar width
 const drawerWidth = 240;
-const closedDrawerWidth = 0;
 
 function Sidebar() {
   const location = useLocation();
   const { settings } = useContext(SettingsContext);
-  const { open, toggleSidebar, isMobile } = useContext(SidebarContext);
+  const { open, toggleSidebar } = useContext(SidebarContext);
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Define sidebar menu items
   const menuItems = [
     {
-      text: 'Home',
+      text: 'Inicio',
       icon: <HomeIcon />,
       path: '/'
     },
     {
-      text: 'Quick Cost',
+      text: 'Costo rápido',
       icon: <FlashOnIcon />,
       path: '/quick-cost'
     },
     {
-      text: 'Quotes',
+      text: 'Cotizaciones',
       icon: <DescriptionIcon />,
       path: '/quotes'
     },
@@ -70,12 +68,12 @@ function Sidebar() {
       path: '/analytics'
     },
     {
-      text: 'Filaments',
+      text: 'Filamentos',
       icon: <PaletteIcon />,
       path: '/filaments'
     },
     {
-      text: 'Printers',
+      text: 'Impresoras',
       icon: <PrintIcon />,
       path: '/printers'
     },
@@ -85,7 +83,7 @@ function Sidebar() {
       path: '/hardware'
     },
     {
-      text: 'Settings',
+      text: 'Configuración',
       icon: <SettingsIcon />,
       path: '/settings'
     }

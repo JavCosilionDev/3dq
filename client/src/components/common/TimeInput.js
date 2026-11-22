@@ -109,7 +109,7 @@ function TimeInput({
       InputProps={{
         endAdornment: <InputAdornment position="end">
           <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-            e.g. 1d 6h 30m
+            1d 6h 30m
           </Typography>
         </InputAdornment>,
       }}

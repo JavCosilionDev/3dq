@@ -6,47 +6,50 @@ import {
   Typography,
   Box,
   IconButton,
-  useTheme,
-  useMediaQuery
+  useTheme
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import SidebarContext from '../../context/SidebarContext';
 
 function TopBar() {
   const location = useLocation();
-  const { toggleSidebar, isMobile } = useContext(SidebarContext);
+  const { toggleSidebar } = useContext(SidebarContext);
   const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Get page title based on current route
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/':
-        return 'Home';
+        return 'Inicio';
       case '/quick-cost':
-        return 'Quick Cost';
+        return 'Costo rápido';
       case '/quotes':
-        return 'Quotes';
+        return 'Cotizaciones';
       case '/quotes/merge':
         return 'Unir cotizaciones';
       case '/sales':
         return 'Ventas';
+      case '/analytics':
+        return 'Análisis';
       case '/filaments':
-        return 'Filament Management';
+        return 'Filamentos';
       case '/printers':
-        return 'Printer Management';
+        return 'Impresoras';
       case '/hardware':
-        return 'Hardware Management';
+        return 'Hardware';
       case '/settings':
-        return 'Settings';
+        return 'Configuración';
       case '/quote/new':
-        return 'New Quote';
+        return 'Nueva cotización';
       default:
         if (location.pathname.endsWith('/document') && location.pathname.startsWith('/quote/')) {
           return 'Documento PDF';
         }
+        if (location.pathname.startsWith('/quote/edit/')) {
+          return 'Editar cotización';
+        }
         if (location.pathname.startsWith('/quote/')) {
-          return 'View Quote';
+          return 'Cotización';
         }
         return 'Impremática';
     }

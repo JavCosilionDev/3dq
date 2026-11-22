@@ -106,18 +106,27 @@ function FilamentUsage({
   }, [isEditMode, quoteFilaments.length, filaments.length]);
 
   return (
-    <Paper sx={{ p: 3, mb: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2, borderRadius: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap', mb: 2 }}>
         <Box>
           <Typography variant="h6">Filamento, color y purga</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Registra cada color usado. La purga se suma al consumo y aparece en el ticket del cliente.
+          <Typography variant="caption" color="text.secondary">
+            Cada color usado se muestra en el ticket del cliente. La purga se registra por separado.
           </Typography>
         </Box>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={addFilament}
+          disabled={filaments.length === 0}
+        >
+          Agregar filamento
+        </Button>
       </Box>
 
       {quoteFilaments.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
           Esta cotización no tiene filamentos registrados.
         </Typography>
       )}
@@ -129,11 +138,11 @@ function FilamentUsage({
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 2,
-            p: 2,
-            mb: 2
+            p: 1.5,
+            mb: 1.5
           }}
         >
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={1.5} alignItems="center">
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth size="small">
                 <InputLabel id={`filament-label-${filament.id}`}>Filamento</InputLabel>
@@ -152,7 +161,7 @@ function FilamentUsage({
               </FormControl>
             </Grid>
 
-            <Grid item xs={8} sm={4} md={2}>
+            <Grid item xs={6} sm={3} md={2}>
               <TextField
                 label="Color"
                 size="small"
@@ -163,9 +172,9 @@ function FilamentUsage({
               />
             </Grid>
 
-            <Grid item xs={4} sm={2} md={1}>
+            <Grid item xs={6} sm={3} md={1}>
               <TextField
-                label="Muestra"
+                label="Tono"
                 type="color"
                 size="small"
                 fullWidth
@@ -200,7 +209,7 @@ function FilamentUsage({
               />
             </Grid>
 
-            <Grid item xs={6} sm={4} md={1.5}>
+            <Grid item xs={8} sm={6} md={2}>
               <TextField
                 label="Costo"
                 size="small"
@@ -210,7 +219,7 @@ function FilamentUsage({
               />
             </Grid>
 
-            <Grid item xs={6} sm={2} md={0.5} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Grid item xs={4} sm={6} md={1} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <IconButton
                 color="error"
                 onClick={() => removeFilament(filament.id)}
@@ -223,15 +232,11 @@ function FilamentUsage({
         </Box>
       ))}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, gap: 2, flexWrap: 'wrap' }}>
-        <Button
-          startIcon={<AddIcon />}
-          onClick={addFilament}
-          disabled={filaments.length === 0}
-        >
-          Agregar filamento
-        </Button>
-        <Typography variant="subtitle1">
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          {quoteFilaments.length} {quoteFilaments.length === 1 ? 'filamento' : 'filamentos'}
+        </Typography>
+        <Typography variant="subtitle1" fontWeight="medium">
           Total filamento: {currencySymbol}{totalFilamentCost.toFixed(2)}
         </Typography>
       </Box>
