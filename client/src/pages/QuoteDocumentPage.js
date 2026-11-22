@@ -18,6 +18,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -547,7 +548,8 @@ function QuoteDocumentPage() {
                 <Button size="small" startIcon={<AddIcon />} onClick={() => addItem('producto')}>Producto</Button>
               </Box>
             </Box>
-            <Table size="small">
+            <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ '& .MuiTableCell-root': { px: 1, py: 0.75 } }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Tipo</TableCell>
@@ -663,6 +665,7 @@ function QuoteDocumentPage() {
                 ))}
               </TableBody>
             </Table>
+            </TableContainer>
           </Paper>
 
           {totals && (

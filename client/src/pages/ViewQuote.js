@@ -305,36 +305,40 @@ function ViewQuote() {
         <Chip size="small" label={statusLabel} color={statusColor} />
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mb: 3 }}>
-        <Button
-          variant="contained"
-          component={Link}
-          to={hasBreakdown ? `/quote/edit/${id}` : `/quote/${id}/document`}
-          startIcon={<EditIcon />}
-        >
-          {hasBreakdown ? 'Editar cotización' : 'Editar documento'}
-        </Button>
-        <Button variant="outlined" component={Link} to={`/quote/${id}/document`} startIcon={<DescriptionIcon />}>
-          Documento PDF
-        </Button>
-        <Button variant="outlined" onClick={() => generatePdf(false)} startIcon={<PictureAsPdfIcon />} disabled={generatingPdf}>
-          {generatingPdf ? 'Generando...' : 'Ver PDF'}
-        </Button>
-        <Button variant="outlined" onClick={() => generatePdf(true)} startIcon={<DownloadIcon />} disabled={generatingPdf}>
-          Descargar PDF
-        </Button>
-        <Button variant="outlined" onClick={generatePng} startIcon={<ImageIcon />} disabled={generatingPng}>
-          {generatingPng ? 'Generando...' : 'Descargar PNG'}
-        </Button>
-        <Button variant="contained" color="success" onClick={openSaleDialog} startIcon={<PointOfSaleIcon />}>
-          Registrar venta
-        </Button>
-        <IconButton
-          aria-label="Más acciones"
-          onClick={(event) => setMenuAnchor(event.currentTarget)}
-        >
-          <MoreVertIcon />
-        </IconButton>
+      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            component={Link}
+            to={hasBreakdown ? `/quote/edit/${id}` : `/quote/${id}/document`}
+            startIcon={<EditIcon />}
+          >
+            {hasBreakdown ? 'Editar cotización' : 'Editar documento'}
+          </Button>
+          <Button variant="outlined" component={Link} to={`/quote/${id}/document`} startIcon={<DescriptionIcon />}>
+            Documento PDF
+          </Button>
+          <Button variant="outlined" onClick={() => generatePdf(false)} startIcon={<PictureAsPdfIcon />} disabled={generatingPdf}>
+            {generatingPdf ? 'Generando...' : 'Ver PDF'}
+          </Button>
+          <Button variant="outlined" onClick={() => generatePdf(true)} startIcon={<DownloadIcon />} disabled={generatingPdf}>
+            Descargar PDF
+          </Button>
+          <Button variant="outlined" onClick={generatePng} startIcon={<ImageIcon />} disabled={generatingPng}>
+            {generatingPng ? 'Generando...' : 'Descargar PNG'}
+          </Button>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', ml: 'auto' }}>
+          <Button variant="contained" color="success" onClick={openSaleDialog} startIcon={<PointOfSaleIcon />}>
+            Registrar venta
+          </Button>
+          <IconButton
+            aria-label="Más acciones"
+            onClick={(event) => setMenuAnchor(event.currentTarget)}
+          >
+            <MoreVertIcon />
+          </IconButton>
+        </Box>
         <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
           <MenuItem onClick={handleDuplicateQuote} disabled={duplicating}>
             <FileCopyIcon fontSize="small" sx={{ mr: 1 }} />

@@ -215,7 +215,7 @@ function QuoteBuilder() {
           });
         }
         
-        // Populate labour
+        // Populate labour, clearing the new-quote defaults for merged quotes
         if (data.labour) {
           setLabour({
             design_minutes: data.labour.design_minutes,
@@ -224,6 +224,15 @@ function QuoteBuilder() {
             other_minutes: data.labour.other_minutes,
             labour_rate_per_hour: data.labour.labour_rate_per_hour,
             total_cost: data.labour.total_cost
+          });
+        } else if (isEditMode) {
+          setLabour({
+            design_minutes: 0,
+            preparation_minutes: 0,
+            post_processing_minutes: 0,
+            other_minutes: 0,
+            labour_rate_per_hour: 0,
+            total_cost: 0
           });
         }
         
@@ -530,6 +539,7 @@ function QuoteBuilder() {
       <Box sx={{ overflowX: 'auto', pb: 1 }}>
         <Stepper 
           activeStep={activeStep} 
+          nonLinear
           sx={{ 
             mb: 4,
             minWidth: { xs: 600, md: '100%' }, // Force minimum width on mobile

@@ -45,9 +45,9 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
     }
   }, [isEditMode, handleInputChange, formData.quote_number]);
   
-  // Initialize markup from settings if not set
+  // Initialize markup from settings only for new quotes
   useEffect(() => {
-    if (settings?.default_markup_percent && !formData.markup) {
+    if (!isEditMode && settings?.default_markup_percent && !formData.markup) {
       handleInputChange({
         target: {
           name: 'markup',
@@ -65,7 +65,7 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
         }
       });
     }
-  }, [settings, formData.markup, formData.quantity, handleInputChange]);
+  }, [isEditMode, settings, formData.markup, formData.quantity, handleInputChange]);
   return (
     <Paper sx={{ p: 3, mb: 3, backgroundColor: 'background.paper' }}>
       <Typography variant="h6" gutterBottom>
@@ -145,7 +145,7 @@ function JobInfo({ formData, handleInputChange, isEditMode }) {
               name="markup"
               label="Markup Percentage"
               type="number"
-              value={formData.markup || ''}
+              value={formData.markup ?? 0}
               onChange={handleInputChange}
               fullWidth
               InputProps={{
