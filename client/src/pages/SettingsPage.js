@@ -14,8 +14,13 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
-  Divider
+  Divider,
+  Link,
+  Stack
 } from '@mui/material';
+import {
+  GitHub as GitHubIcon
+} from '@mui/icons-material';
 import SettingsContext from '../context/SettingsContext';
 
 function SettingsPage() {
@@ -480,6 +485,56 @@ function SettingsPage() {
           </Box>
         </CardContent>
       </Card>
+
+      <Divider sx={{ mt: 4, mb: 2.5 }} />
+
+      <Box component="footer">
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={2}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+        >
+          <Box sx={{ maxWidth: 760 }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              QMaticFDM
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              QMaticFDM es un fork de{' '}
+              <Link
+                href="https://github.com/Migz93/3dq"
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="hover"
+              >
+                3DQ
+              </Link>
+              , mantenido por Impremática con modificaciones y personalizaciones propias.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Proyecto open source bajo licencia MIT. Si eres desarrollador y quieres contribuir,
+              puedes enviar mejoras, reportar errores o proponer documentación en el repositorio
+            </Typography>
+          </Box>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexShrink: 0 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<GitHubIcon />}
+              href="https://github.com/JavCosilionDev/3dq"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Repositorio QMaticFDM
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+          QMaticFDM · basado en 3DQ de Migz93 · Licencia MIT
+        </Typography>
+      </Box>
 
       <Snackbar open={success} autoHideDuration={6000} onClose={handleCloseSuccess}>
         <Alert onClose={handleCloseSuccess} severity="success" sx={{ width: '100%' }}>

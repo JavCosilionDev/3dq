@@ -1,50 +1,45 @@
 <p align="center">
-  <img src="assets/images/Logo.svg" alt="3DQ Logo"/>
+  <img src="assets/images/imprematica-logo.png" width="120" alt="QMaticFDM"/>
 </p>
 
-3DQ is a self-hosted quoting tool for 3D prints.
-It helps you calculate quotes for 3D printing jobs by considering filament costs, power usage, printer depreciation, labor, and more.
+# QMaticFDM
 
-# Preview
+QMaticFDM es un fork de [3DQ](https://github.com/Migz93/3dq) mantenido por [Impremática](https://imprematica.com), con modificaciones y personalizaciones propias para cotizaciones, ventas y documentos de impresión 3D.
 
-![Home Page](./assets/screenshots/Screenshot_Home.jpg)
-![Quote](./assets/screenshots/Screenshot_Quote.jpg)
-![Invoice](./assets/screenshots/Screenshot_Invoice.jpg)
-![InvoiceInternal](./assets/screenshots/Screenshot_InvoiceInternal.jpg)
+> **Basado en 3DQ** · Proyecto original: [Migz93/3dq](https://github.com/Migz93/3dq) · Licencia MIT.
 
-## Features
+## Características
 
-- **Quick Cost**: Generate fast cost estimates with minimal inputs
-- **Quote Builder**: Create detailed quotes with a step-by-step process (general info, filament, hardware, labour, cost summary)
-- **Quote History**: View & manage all past quotes
-- **Impremática PDF**: Generate client-ready PDFs from a validated document, with totals that close to the peso
-- **Document Editor**: Adjust issue date, target total, discount mode, shipping, gift flag and visible lines before exporting
-- **Sales Tracking**: Mark quotes as sold and review sold totals separately
-- **Quote Merging**: Combine existing quotes into one multi-product document using their calculated totals
-- **HTML Invoices**: Generate client-friendly or detailed internal invoices with optional tax calculation
-- **Filament Management**: Configure filament types with pricing and sync with Spoolman
-- **Printer Management**: Configure printers with depreciation and power usage calculations
-- **Hardware Management**: Configure additional components used in prints (screws, magnets, etc.)
-- **Settings**: Configure global settings (electricity cost, labor rate, markup, tax rate, currency, branding, etc.)
-- **Customizable Branding**: Personalize with your brand color & name.
+- **Costo rápido**: estimaciones ágiles con los datos esenciales.
+- **Cotizador paso a paso**: datos del trabajo, filamento con color y purga, hardware, impresión, mano de obra y resumen.
+- **Historial de cotizaciones**: consulta, edición, duplicado y combinación de cotizaciones existentes.
+- **Imágenes por cotización**: varias imágenes con una marcada como principal para el cliente.
+- **PDF y PNG Impremática**: documentos con folio, totales validados y exportación de imagen en alta resolución.
+- **Ventas**: una cotización puede tener varias ventas, con subtotal, IVA y referencia bancaria para conciliación.
+- **Análisis**: ventas por semana y por mes, filamento consumido, purga, formas de pago, modelos más vendidos y conversión.
+- **Filamentos, impresoras y hardware**: catálogos con costos, depreciación y consumo.
+- **Spoolman**: sincronización opcional de filamentos.
+- **Configuración y branding**: costos globales, impuestos, moneda, marca y datos del documento.
 
-## Getting Started
+## Requisitos
 
-> **Note**: The project uses `./config` as the persistent data directory. It contains the SQLite database and generated PDFs. Docker Compose mounts it at `/config`.
+- Node.js 20 o superior.
+- Docker y Docker Compose para el entorno de producción.
+- Chrome, Chromium o Edge para generar PDF y PNG.
 
-### Quick Start with Docker
+## Inicio rápido con Docker
+
+El proyecto usa `./config` como directorio persistente. Contiene la base de datos SQLite, las imágenes y los documentos generados. Docker Compose lo monta en `/config`.
 
 ```bash
 npm run docker:up
 ```
 
-Then access the application at http://localhost:6123
+La aplicación queda disponible en http://localhost:6123
 
-The container builds the current project, including the React client and Chromium for PDF generation.
+El contenedor compila el cliente React e instala Chromium para la generación de documentos.
 
 ### Docker Compose
-
-The repository includes `docker-compose.yml`:
 
 ```yaml
 services:
@@ -63,7 +58,7 @@ services:
     restart: unless-stopped
 ```
 
-Useful commands:
+Comandos útiles:
 
 ```bash
 npm run docker:up
@@ -71,42 +66,46 @@ npm run docker:logs
 npm run docker:down
 ```
 
-Do not run `npm run dev` at the same time as Docker. The development server uses port `6123` for Express and `3000` for React; Docker serves everything from `6123`.
+No ejecutes `npm run dev` al mismo tiempo que Docker. El servidor de desarrollo usa el puerto `6123` para Express y `3000` para React; Docker sirve todo desde `6123`.
 
-## PDF Impremática
+## Documentos
 
-The PDF export uses the canonical document stored in `quote_documents` and renders it with Chromium. It requires Chrome or Chromium:
+La exportación usa el documento canónico guardado en `quote_documents` y lo renderiza con Chromium. Requiere Chrome o Chromium:
 
-- Windows: Chrome or Edge is detected automatically.
-- Linux/Docker: set `PUPPETEER_EXECUTABLE_PATH` to the Chromium executable.
+- Windows: Chrome o Edge se detectan automáticamente.
+- Linux/Docker: configura `PUPPETEER_EXECUTABLE_PATH` con la ruta de Chromium.
 
-Generate a PDF from a JSON file:
+Generar un PDF desde un archivo JSON:
 
 ```bash
 npm run pdf:render -- tests/fixtures/pdf/IMP26-0034.json
 ```
 
-Run the PDF regression tests:
+Ejecutar las pruebas de regresión de PDF:
 
 ```bash
 npm run test:pdf
 ```
 
-## Security Notice
+## Seguridad
 
-3DQ was developed with the use of AI technologies (Windsurf with Claude 3.7 Sonnet). We can't verify that best practices were followed nor that the code is free of vulnerabilities.
-Therefore we recommend:
+3DQ, el proyecto base, fue desarrollado con apoyo de tecnologías de IA. QMaticFDM hereda ese código y agrega modificaciones propias; no se garantiza que el código esté libre de vulnerabilidades. Se recomienda:
 
-- **Local Network Only**: For optimal security, run 3DQ on your local network rather than exposing it directly to the internet
-- **Use VPN**: If remote access is needed, consider using a VPN
-- **Regular Backups**: Keep regular backups of your database file located in the config directory
-- **Updates**: Check for updates regularly as security improvements may be released
+- **Red local**: ejecutar la aplicación en la red local en lugar de exponerla directamente a internet.
+- **VPN**: usar una VPN si se necesita acceso remoto.
+- **Respaldos**: mantener copias de seguridad del archivo SQLite ubicado en `config`.
+- **Actualizaciones**: revisar periódicamente las mejoras de seguridad.
 
-## Contributing
+## Contribuir
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+QMaticFDM es un proyecto open source y las contribuciones son bienvenidas. Puedes ayudar con código, pruebas, documentación, traducciones o reportes de errores.
 
-## License
+- Revisa el [repositorio de QMaticFDM](https://github.com/JavCosilionDev/3dq).
+- Abre un issue para reportar errores o proponer mejoras.
+- Envía tus cambios mediante un pull request.
 
-MIT
+Si tu cambio es específico de QMaticFDM, descríbelo con claridad para que pueda integrarse sin afectar la compatibilidad con el proyecto base.
 
+## Licencia
+
+MIT. QMaticFDM conserva la licencia y el reconocimiento del proyecto original [3DQ](https://github.com/Migz93/3dq).

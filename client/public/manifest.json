@@ -1,6 +1,7 @@
 {
-  "short_name": "Impremática",
-  "name": "Impremática - Cotizaciones 3D",
+  "short_name": "QMaticFDM",
+  "name": "QMaticFDM — Cotizaciones 3D",
+  "description": "QMaticFDM es un fork de 3DQ mantenido por Impremática, con modificaciones y personalizaciones propias.",
   "icons": [
     {
       "src": "logo-imprematica.png",

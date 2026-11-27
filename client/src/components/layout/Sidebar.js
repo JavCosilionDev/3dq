@@ -11,7 +11,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-
+  Typography,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -110,8 +110,11 @@ function Sidebar() {
       }}
     >
       <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <DynamicLogo height="40px" />
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
+          <DynamicLogo height="36px" />
+          <Typography variant="subtitle1" fontWeight="bold" lineHeight={1.1}>
+            QMaticFDM
+          </Typography>
         </Box>
         <Divider />
         <List>
